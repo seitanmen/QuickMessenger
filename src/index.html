@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QuickMessenger</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+
+    <!-- Connection Status Screen -->
+    <div id="connection-screen" class="connection-screen">
+        <div class="connection-container">
+            <div class="connection-spinner"></div>
+            <h2 id="connection-title">Connecting to Server...</h2>
+            <p id="connection-status">Searching for available servers...</p>
+            <div class="connection-details">
+                <div id="connection-progress"></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="main-app" class="main-app">
+        <header class="app-header">
+             <div class="header-left">
+                  <h1>QuickMessenger</h1>
+                 <span id="username-display"></span>
+                 <button id="change-username-btn" class="change-username-btn">Change Username</button>
+             </div>
+             <div class="header-right">
+                 <select id="language-select" class="language-select">
+                     <option value="en">English</option>
+                     <option value="ja">日本語</option>
+                     <option value="zh">中文</option>
+                 </select>
+                 <button id="theme-toggle" class="theme-btn">
+                     <img id="theme-icon" src="../icon/sun.svg" alt="Theme" class="icon">
+                 </button>
+                 <button id="screenshot-btn" class="screenshot-btn">
+                     <img src="../icon/screenshot-icon.svg" alt="Screenshot" class="icon">
+                 </button>
+                 <button id="debug-btn" class="debug-btn">
+                     <img src="../icon/debug-icon.svg" alt="Debug" class="icon">
+                 </button>
+
+             </div>
+        </header>
+
+        <div class="app-content">
+            <div class="sidebar">
+                <div class="user-setup" id="user-setup">
+                    <h3>Choose Username</h3>
+                    <input type="text" id="username-input" placeholder="Enter username">
+                    <button id="register-btn">Register</button>
+                </div>
+
+                <div class="user-list" id="user-list">
+                    <h3>Online Users</h3>
+                    <div id="users-container"></div>
+                </div>
+            </div>
+
+            <div class="chat-area">
+                <div class="chat-messages" id="chat-messages"></div>
+
+                <div class="message-input-area">
+                    <div class="file-preview" id="file-preview"></div>
+                    <div class="input-container">
+                        <textarea id="message-input" placeholder="Type your message... (Shift+Enter for new line)" rows="1"></textarea>
+                        <div class="input-buttons">
+                             <button id="file-btn" class="file-btn">
+                                 <img src="../icon/file-icon.svg" fill="none" alt="file" class="icon">
+                             </button>
+                             <button id="send-btn" class="send-btn">
+                                 <img src="../icon/send-icon.svg" fill="none" alt="send" class="icon">
+                             </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <input type="file" id="file-input" style="display: none;" multiple>
+
+    <!-- Username Change Modal -->
+    <div id="username-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modal-title">Change Username</h3>
+                <span class="modal-close">&times;</span>
+            </div>
+            <div class="modal-body">
+                <input type="text" id="new-username-input" placeholder="Enter new username">
+                <div class="modal-buttons">
+                    <button id="modal-cancel-btn">Cancel</button>
+                    <button id="modal-confirm-btn">Change</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
