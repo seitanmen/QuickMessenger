@@ -1,0 +1,366 @@
+[
+  {
+    "type": "message",
+    "from": "d2ba7cecd1e99cd77daae95c44f940ed",
+    "to": "43221f9ec28fb4d7fa8a32039585fe84",
+    "content": "今父は",
+    "timestamp": "2025-09-12T14:07:52.207Z"
+  },
+  {
+    "type": "message",
+    "from": "43221f9ec28fb4d7fa8a32039585fe84",
+    "to": "all",
+    "content": "あなたは誰？",
+    "timestamp": "2025-09-12T14:08:03.249Z"
+  },
+  {
+    "type": "message",
+    "from": "43221f9ec28fb4d7fa8a32039585fe84",
+    "to": "all",
+    "content": "私は",
+    "timestamp": "2025-09-12T14:08:11.461Z"
+  },
+  {
+    "type": "message",
+    "from": "43221f9ec28fb4d7fa8a32039585fe84",
+    "to": "all",
+    "content": "妖怪",
+    "timestamp": "2025-09-12T14:08:14.279Z"
+  },
+  {
+    "type": "message",
+    "from": "d2ba7cecd1e99cd77daae95c44f940ed",
+    "to": "43221f9ec28fb4d7fa8a32039585fe84",
+    "content": "母は",
+    "timestamp": "2025-09-12T14:08:17.208Z"
+  },
+  {
+    "type": "message",
+    "from": "e23de855689b8d38e48878056cc76efd",
+    "to": "43221f9ec28fb4d7fa8a32039585fe84",
+    "content": "こんにちは",
+    "timestamp": "2025-09-12T14:10:22.961Z"
+  },
+  {
+    "type": "message",
+    "from": "e23de855689b8d38e48878056cc76efd",
+    "to": "7db26a0664a5daf2da7a2868b6eb7d3b",
+    "content": "こんにちは",
+    "timestamp": "2025-09-12T14:10:31.487Z"
+  },
+  {
+    "type": "message",
+    "from": "903a803b9b0552685fe89d5b4fecf280",
+    "to": "all",
+    "content": "こんにちは",
+    "timestamp": "2025-09-12T14:14:10.530Z"
+  },
+  {
+    "type": "message",
+    "from": "f0b351f6efcf84d8829becb9755db980",
+    "to": "all",
+    "content": "kkk",
+    "timestamp": "2025-09-12T14:25:19.469Z"
+  },
+  {
+    "type": "message",
+    "from": "575ddeb04e062189ffb9f3c2bfb6a986",
+    "to": "all",
+    "content": "kkkkk",
+    "timestamp": "2025-09-12T14:25:24.290Z"
+  },
+  {
+    "type": "message",
+    "from": "f0b351f6efcf84d8829becb9755db980",
+    "to": "all",
+    "content": "こんにちは",
+    "timestamp": "2025-09-12T14:25:29.053Z"
+  },
+  {
+    "type": "message",
+    "from": "575ddeb04e062189ffb9f3c2bfb6a986",
+    "to": "all",
+    "content": "こんに一あは",
+    "timestamp": "2025-09-12T14:25:34.103Z"
+  },
+  {
+    "type": "message",
+    "from": "47c227df48f93fa6e2401d28cd408bf2",
+    "to": "all",
+    "content": "ｌｌｌｌ",
+    "timestamp": "2025-09-12T14:39:36.929Z"
+  },
+  {
+    "type": "message",
+    "from": "e3d466786d7a5cb559185aea4124aded",
+    "to": "all",
+    "content": "ｋｋｋ",
+    "timestamp": "2025-09-12T14:39:44.458Z"
+  },
+  {
+    "type": "message",
+    "from": "bf1e686bb73e6a39bebc7ae38e36a41d",
+    "to": "all",
+    "content": "；；；；；",
+    "timestamp": "2025-09-12T14:39:51.611Z"
+  },
+  {
+    "type": "message",
+    "from": "dc74c954532098e317d7142fe2ab15eb",
+    "to": "all",
+    "content": "ここ",
+    "timestamp": "2025-09-12T14:41:12.515Z"
+  },
+  {
+    "type": "message",
+    "from": "267308657d06b677643f47e7299f2467",
+    "to": "all",
+    "content": "っじ",
+    "timestamp": "2025-09-12T14:41:15.801Z"
+  },
+  {
+    "type": "message",
+    "from": "ff4a7700db7d8f2eea4cab943cb20bd9",
+    "to": "c0c8a1333496f619eb4b47cdd258598d",
+    "content": "kkkｋｋkkkkkkkkkkkkkｋｋ",
+    "timestamp": "2025-09-12T14:56:03.409Z"
+  },
+  {
+    "type": "message",
+    "from": "c0c8a1333496f619eb4b47cdd258598d",
+    "to": "all",
+    "content": "；；；；；；；；",
+    "timestamp": "2025-09-12T14:56:31.834Z"
+  },
+  {
+    "type": "message",
+    "from": "bcb1a8c16e1d75c50aea218e52846087",
+    "to": "cb39e580fa30d78e9e505d75ecccbe7e",
+    "content": "こんにちは",
+    "timestamp": "2025-09-12T14:58:08.226Z"
+  },
+  {
+    "type": "message",
+    "from": "cb39e580fa30d78e9e505d75ecccbe7e",
+    "to": "bcb1a8c16e1d75c50aea218e52846087",
+    "content": "ありがとう",
+    "timestamp": "2025-09-12T14:58:15.280Z"
+  },
+  {
+    "type": "message",
+    "from": "ae34e24c20aa108397b5fbb490659641",
+    "to": "all",
+    "content": "いう",
+    "timestamp": "2025-09-12T14:58:49.373Z"
+  },
+  {
+    "type": "message",
+    "from": "ae34e24c20aa108397b5fbb490659641",
+    "to": "cb39e580fa30d78e9e505d75ecccbe7e",
+    "content": "いう",
+    "timestamp": "2025-09-12T14:58:52.490Z"
+  },
+  {
+    "type": "message",
+    "from": "ae34e24c20aa108397b5fbb490659641",
+    "to": "bcb1a8c16e1d75c50aea218e52846087",
+    "content": "いう",
+    "timestamp": "2025-09-12T14:58:55.505Z"
+  },
+  {
+    "type": "message",
+    "from": "ae34e24c20aa108397b5fbb490659641",
+    "to": "bcb1a8c16e1d75c50aea218e52846087",
+    "content": "あ",
+    "timestamp": "2025-09-12T14:59:06.000Z"
+  },
+  {
+    "type": "message",
+    "from": "ae34e24c20aa108397b5fbb490659641",
+    "to": "cb39e580fa30d78e9e505d75ecccbe7e",
+    "content": "あ",
+    "timestamp": "2025-09-12T14:59:16.383Z"
+  },
+  {
+    "type": "message",
+    "from": "ae34e24c20aa108397b5fbb490659641",
+    "to": "cb39e580fa30d78e9e505d75ecccbe7e",
+    "content": "い",
+    "timestamp": "2025-09-12T14:59:23.091Z"
+  },
+  {
+    "type": "message",
+    "from": "8cb45026112940c1d0e324a8915b9ee0",
+    "to": "5700b7a67b901336c2b5d0b92a0fec60",
+    "content": "ｓｓｓｓｓ",
+    "timestamp": "2025-09-12T15:05:13.724Z"
+  },
+  {
+    "type": "message",
+    "from": "41ebc21eabd83687f2881a554a6570f4",
+    "to": "5700b7a67b901336c2b5d0b92a0fec60",
+    "content": "ｃｃｃｃ",
+    "timestamp": "2025-09-12T15:05:19.280Z"
+  },
+  {
+    "type": "message",
+    "from": "5700b7a67b901336c2b5d0b92a0fec60",
+    "to": "8cb45026112940c1d0e324a8915b9ee0",
+    "content": "ああああ",
+    "timestamp": "2025-09-12T15:05:29.197Z"
+  },
+  {
+    "type": "message",
+    "from": "52b224221c556889e91bd5d4b5e812d1",
+    "to": "b8630289bff3d628bbcc25ba25561f33",
+    "content": "aaaa",
+    "timestamp": "2025-09-12T15:59:09.418Z"
+  },
+  {
+    "type": "message",
+    "from": "284f4ddf59bc582734f1d8b2e7696e21",
+    "to": "52b224221c556889e91bd5d4b5e812d1",
+    "content": "aaaa",
+    "timestamp": "2025-09-12T15:59:14.810Z"
+  },
+  {
+    "type": "message",
+    "from": "52b224221c556889e91bd5d4b5e812d1",
+    "to": "b8630289bff3d628bbcc25ba25561f33",
+    "content": "aaaa",
+    "timestamp": "2025-09-12T15:59:18.957Z"
+  },
+  {
+    "type": "message",
+    "from": "284f4ddf59bc582734f1d8b2e7696e21",
+    "to": "b8630289bff3d628bbcc25ba25561f33",
+    "content": "aaaaaa",
+    "timestamp": "2025-09-12T15:59:37.882Z"
+  },
+  {
+    "type": "message",
+    "from": "4bd3fa85cb22b551eea6c334b67c61b8",
+    "to": "52b224221c556889e91bd5d4b5e812d1",
+    "content": "aaaa",
+    "timestamp": "2025-09-12T16:05:28.838Z"
+  },
+  {
+    "type": "message",
+    "from": "4bd3fa85cb22b551eea6c334b67c61b8",
+    "to": "52b224221c556889e91bd5d4b5e812d1",
+    "content": "aaas9",
+    "timestamp": "2025-09-12T16:05:40.758Z"
+  },
+  {
+    "type": "message",
+    "from": "52b224221c556889e91bd5d4b5e812d1",
+    "to": "4bd3fa85cb22b551eea6c334b67c61b8",
+    "content": "こんにちは",
+    "timestamp": "2025-09-12T16:05:51.494Z"
+  },
+  {
+    "type": "message",
+    "from": "4816c13c9fc364827526fe54bb2541a1",
+    "to": "85b38ff16afdecfaf0dbc0e325555146",
+    "content": "今日じゃ",
+    "timestamp": "2025-09-12T16:13:32.833Z"
+  },
+  {
+    "type": "message",
+    "from": "4816c13c9fc364827526fe54bb2541a1",
+    "to": "85b38ff16afdecfaf0dbc0e325555146",
+    "content": "誰",
+    "timestamp": "2025-09-12T16:13:50.862Z"
+  },
+  {
+    "type": "message",
+    "from": "4816c13c9fc364827526fe54bb2541a1",
+    "to": "85b38ff16afdecfaf0dbc0e325555146",
+    "content": "anatahadare",
+    "timestamp": "2025-09-12T16:14:22.360Z"
+  },
+  {
+    "type": "message",
+    "from": "4816c13c9fc364827526fe54bb2541a1",
+    "to": "85b38ff16afdecfaf0dbc0e325555146",
+    "content": "私は",
+    "timestamp": "2025-09-12T16:14:35.878Z"
+  },
+  {
+    "type": "message",
+    "from": "4816c13c9fc364827526fe54bb2541a1",
+    "to": "85b38ff16afdecfaf0dbc0e325555146",
+    "content": "ああ",
+    "timestamp": "2025-09-12T16:14:47.707Z"
+  },
+  {
+    "type": "message",
+    "from": "4816c13c9fc364827526fe54bb2541a1",
+    "to": "85b38ff16afdecfaf0dbc0e325555146",
+    "content": "あああ",
+    "timestamp": "2025-09-12T16:14:51.477Z"
+  },
+  {
+    "type": "message",
+    "from": "4816c13c9fc364827526fe54bb2541a1",
+    "to": "0e274f6eb6d2a31e74d68a4da3dd4967",
+    "content": "あおい",
+    "timestamp": "2025-09-12T16:15:28.505Z"
+  },
+  {
+    "type": "message",
+    "from": "0e274f6eb6d2a31e74d68a4da3dd4967",
+    "to": "4816c13c9fc364827526fe54bb2541a1",
+    "content": "何",
+    "timestamp": "2025-09-12T16:15:45.990Z"
+  },
+  {
+    "type": "message",
+    "from": "f2637da0cc203b23cfcbd0ae6afa5cc6",
+    "to": "cb038715c528dcbe17c1c0d361dc3541",
+    "content": "kon",
+    "timestamp": "2025-09-12T16:35:02.071Z"
+  },
+  {
+    "type": "message",
+    "from": "cb038715c528dcbe17c1c0d361dc3541",
+    "to": "f2637da0cc203b23cfcbd0ae6afa5cc6",
+    "content": "kkk",
+    "timestamp": "2025-09-12T16:35:08.663Z"
+  },
+  {
+    "type": "message",
+    "from": "52cb1d1f4ae2b56657d119395dbbebb9",
+    "to": "28a00645d862ff9be7e54d9d14945fd6",
+    "content": "ll",
+    "timestamp": "2025-09-12T16:47:25.693Z"
+  },
+  {
+    "type": "message",
+    "from": "28a00645d862ff9be7e54d9d14945fd6",
+    "to": "52cb1d1f4ae2b56657d119395dbbebb9",
+    "content": "kkk",
+    "timestamp": "2025-09-12T16:47:41.552Z"
+  },
+  {
+    "type": "message",
+    "from": "90ff0f96250a440ae8b4caace4bdd039",
+    "to": "8a30cda92d67fdd6aa8f0de8231bdf51",
+    "content": "aaa",
+    "timestamp": "2025-09-12T17:24:18.039Z"
+  },
+  {
+    "type": "message",
+    "from": "6b7d69ba5798538613b88d753e875fee",
+    "to": "c956d02474d1f12071ad9e302e429ee6",
+    "content": "こんにちわ",
+    "timestamp": "2025-09-12T17:45:59.466Z"
+  },
+  {
+    "type": "message",
+    "from": "c956d02474d1f12071ad9e302e429ee6",
+    "to": "6b7d69ba5798538613b88d753e875fee",
+    "content": "ｊｊｊ",
+    "timestamp": "2025-09-12T17:46:09.803Z"
+  }
+]

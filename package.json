@@ -1,0 +1,42 @@
+{
+  "name": "quickmessenger",
+  "version": "1.0.0",
+  "description": "Cross-platform IP messaging app",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "server": "node server.js",
+    "debug": "electron . --remote-debugging-port=9222",
+    "build": "electron-builder",
+    "dist": "electron-builder --publish=never"
+  },
+  "author": "QuickMessenger",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^38.1.0",
+    "electron-builder": "^24.0.0"
+  },
+  "dependencies": {
+    "crypto-js": "^4.1.1",
+    "electron-store": "^8.1.1",
+    "uuid": "^9.0.0",
+    "ws": "^8.13.0"
+  },
+  "build": {
+    "appId": "com.quickmessenger.app",
+    "productName": "QuickMessenger",
+    "directories": {
+      "output": "dist"
+    },
+
+    "mac": {
+      "icon": "icon/icon.icns"
+    },
+    "win": {
+      "icon": "icon/icon.ico"
+    },
+    "linux": {
+      "icon": "icon/icon.png"
+    }
+  }
+}
