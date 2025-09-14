@@ -1,12 +1,37 @@
-const WebSocket = require('ws');
-const crypto = require('crypto-js');
-const fs = require('fs');
-const os = require('os');
-const dgram = require('dgram');
-const path = require('path');
-const jwt = require('jsonwebtoken');
+ require('dotenv').config();
 
-const JWT_SECRET = 'your-secret-key'; // In production, use environment variable
+ const WebSocket = require('ws');
+ const crypto = require('crypto-js');
+ const cryptoNode = require('crypto');
+ const fs = require('fs');
+ const os = require('os');
+ const dgram = require('dgram');
+ const path = require('path');
+ const jwt = require('jsonwebtoken');
+
+
+
+// Check for required environment variables
+if (!process.env.JWT_SECRET) {
+  console.error('Error: JWT_SECRET environment variable is required');
+  process.exit(1);
+}
+if (!process.env.AES_SECRET_KEY) {
+  console.error('Error: AES_SECRET_KEY environment variable is required');
+  process.exit(1);
+}
+
+const JWT_SECRET = process.env.JWT_SECRET;
+const AES_SECRET_KEY = process.env.AES_SECRET_KEY;
+
+
+
+// Generate RSA key pair for server
+const { publicKey: serverPublicKey, privateKey: serverPrivateKey } = cryptoNode.generateKeyPairSync('rsa', {
+  modulusLength: 2048,
+  publicKeyEncoding: { type: 'pkcs1', format: 'pem' },
+  privateKeyEncoding: { type: 'pkcs1', format: 'pem' }
+});
 
 let wss;
 let clients = new Map();
@@ -95,7 +120,19 @@ function initWebSocketServer() {
 
     wss.on('connection', (ws, req) => {
       const clientId = req.socket.remoteAddress + ':' + req.socket.remotePort;
+      console.log(`New client connected: ${clientId}`);
+      fs.appendFileSync(path.join(__dirname, 'server_debug.log'), `[${new Date().toISOString()}] New client connected: ${clientId}\n`);
       clients.set(clientId, ws);
+
+      // Send server public key to client
+      console.log('Sending server public key to client');
+      const publicKeyMessage = JSON.stringify({
+        type: 'server_public_key',
+        publicKey: serverPublicKey
+      });
+      console.log('Public key message length:', publicKeyMessage.length);
+      ws.send(publicKeyMessage);
+      console.log('Server public key sent to client');
 
       ws.on('message', (message) => {
         handleMessage(ws, message, clientId);
@@ -138,7 +175,11 @@ function handleMessage(ws, message, clientId) {
     const data = JSON.parse(message);
 
     if (data.type === 'encrypted') {
-      const decrypted = crypto.AES.decrypt(data.content, 'secret-key').toString(crypto.enc.Utf8);
+      if (!ws.sessionKey) {
+        console.error('Session key not established for encrypted message');
+        return;
+      }
+      const decrypted = crypto.AES.decrypt(data.content, ws.sessionKey).toString(crypto.enc.Utf8);
       const parsedData = JSON.parse(decrypted);
 
       switch (parsedData.type) {
@@ -166,6 +207,13 @@ function handleMessage(ws, message, clientId) {
         case 'register':
           handleUserRegistration(ws, data, clientId);
           break;
+        case 'client_public_key':
+          // Store client public key and decrypt session key
+          ws.clientPublicKey = data.publicKey;
+          const encryptedSessionKey = Buffer.from(data.encryptedSessionKey, 'base64');
+          ws.sessionKey = cryptoNode.privateDecrypt(serverPrivateKey, encryptedSessionKey).toString();
+          console.log('Session key established for client:', clientId);
+          break;
       }
     }
   } catch (error) {
@@ -186,23 +234,50 @@ function handleUserRegistration(ws, data, clientId) {
       const decoded = jwt.verify(data.token, JWT_SECRET);
       let decryptedUserId;
 
-      if (decoded.encryptedUserId) {
-        // Decrypt encrypted userId
-        decryptedUserId = crypto.AES.decrypt(decoded.encryptedUserId, data.password).toString(crypto.enc.Utf8);
-        console.log(`Token decoded: encrypted userId decrypted to ${decryptedUserId}, issued at ${new Date(decoded.iat * 1000)}, expires at ${new Date(decoded.exp * 1000)}`);
-      } else {
-        throw new Error('Invalid token format: legacy tokens not supported');
-      }
+       if (decoded.encryptedUserId) {
+         // Check if password is provided
+         // First decrypt the password if it's encrypted
+         let tokenPassword = data.password;
+         if (data.passwordEncrypted && data.password) {
+           try {
+             tokenPassword = cryptoNode.privateDecrypt(serverPrivateKey, Buffer.from(data.password, 'base64')).toString();
+             console.log(`Password decrypted for token validation: "${tokenPassword}"`);
+           } catch (error) {
+             console.log('Password decryption failed for token validation:', error.message);
+             tokenPassword = data.password; // Fall back to original
+           }
+         }
 
-      if (decryptedUserId !== data.userId) {
-        const errorResponse = {
-          type: 'registration_error',
-          error: 'Invalid token for userId.'
-        };
-        ws.send(JSON.stringify(errorResponse));
-        console.log(`Registration rejected: Token mismatch for userId ${data.userId}`);
-        return;
-      }
+         if (!tokenPassword) {
+           console.log('No password available for token validation, trying with empty string');
+           // Try with empty string for backward compatibility
+           try {
+             decryptedUserId = crypto.AES.decrypt(decoded.encryptedUserId, '').toString(crypto.enc.Utf8);
+             console.log(`Token decoded with empty password: encrypted userId decrypted to "${decryptedUserId}"`);
+           } catch (error) {
+             throw new Error('Password required for token validation');
+           }
+         } else {
+           // Decrypt encrypted userId with the decrypted password
+           console.log(`Decrypting token with password: "${tokenPassword}"`);
+           decryptedUserId = crypto.AES.decrypt(decoded.encryptedUserId, tokenPassword).toString(crypto.enc.Utf8);
+           console.log(`Token decoded: encrypted userId decrypted to "${decryptedUserId}", issued at ${new Date(decoded.iat * 1000)}, expires at ${new Date(decoded.exp * 1000)}`);
+         }
+         console.log(`Comparing: decrypted="${decryptedUserId}", received="${data.userId}"`);
+       } else {
+         throw new Error('Invalid token format: legacy tokens not supported');
+       }
+
+       if (decryptedUserId !== data.userId) {
+         const errorResponse = {
+           type: 'registration_error',
+           error: 'Invalid token for userId.'
+         };
+         ws.send(JSON.stringify(errorResponse));
+         console.log(`Registration rejected: Token mismatch for userId ${data.userId}`);
+         console.log(`Expected userId: ${decryptedUserId}, received userId: ${data.userId}`);
+         return;
+       }
     } catch (error) {
       const errorResponse = {
         type: 'registration_error',
@@ -258,20 +333,51 @@ function handleUserRegistration(ws, data, clientId) {
     username: data.username,
     connectedAt: new Date().toISOString()
   });
+  // Decrypt password if encrypted
+  console.log(`Received password: "${data.password}" (encrypted: ${data.passwordEncrypted})`);
+  let decryptedPassword = data.password;
+  if (data.passwordEncrypted && data.password) {
+    try {
+      decryptedPassword = cryptoNode.privateDecrypt(serverPrivateKey, Buffer.from(data.password, 'base64')).toString();
+      console.log(`Password decrypted with server private key: "${decryptedPassword}"`);
+    } catch (error) {
+      console.log('Password decryption failed:', error.message);
+      // Fall back to original password if decryption fails
+      decryptedPassword = data.password;
+    }
+  } else if (!data.password) {
+    console.log('No password provided, using empty string');
+    decryptedPassword = '';
+  }
 
-  // Encrypt userId with password
-  const encryptedUserId = crypto.AES.encrypt(userId, data.password).toString();
+  // Encrypt userId with decrypted password
+  console.log(`Encrypting userId "${userId}" with password "${decryptedPassword}"`);
+  const encryptedUserId = crypto.AES.encrypt(userId, decryptedPassword).toString();
+  console.log(`Encrypted userId: ${encryptedUserId}`);
 
   // Generate JWT token with encrypted userId
   const token = jwt.sign({ encryptedUserId }, JWT_SECRET, { expiresIn: '24h' });
+  console.log(`Generated token: ${token}`);
 
   const response = {
     type: 'registration_success',
     userId: userId,
+    username: data.username,
     token: token
   };
 
-  ws.send(JSON.stringify(response));
+  // Encrypt response with session key
+  if (ws.sessionKey) {
+    const encrypted = crypto.AES.encrypt(JSON.stringify(response), ws.sessionKey).toString();
+    const packet = {
+      type: 'encrypted',
+      content: encrypted
+    };
+    ws.send(JSON.stringify(packet));
+  } else {
+    // Fallback to plain text if session key not established
+    ws.send(JSON.stringify(response));
+  }
   broadcastUserList();
   console.log(`${isReconnect ? 'User reconnected' : 'User registered'}: ${data.username} (${userId})`);
 }
@@ -301,7 +407,10 @@ function handleChatMessage(data) {
 
 // Handle username change
 function handleUsernameChange(ws, data) {
+  console.log(`=== HANDLING USERNAME CHANGE ===`);
   console.log(`Username change request from userId ${ws.userId}: '${ws.username}' -> '${data.newUsername}'`);
+  console.log(`WebSocket userId: ${ws.userId}, username: ${ws.username}`);
+  console.log(`Request data:`, data);
   if (ws.username && data.newUsername) {
     // Check for duplicate username (excluding current user)
     for (const [existingUserId, session] of userSessions) {
@@ -311,7 +420,7 @@ function handleUsernameChange(ws, data) {
           type: 'username_change_error',
           error: 'Username already in use. Please choose a different username.'
         };
-        const encrypted = crypto.AES.encrypt(JSON.stringify(errorResponse), 'secret-key').toString();
+        const encrypted = crypto.AES.encrypt(JSON.stringify(errorResponse), AES_SECRET_KEY).toString();
         const packet = {
           type: 'encrypted',
           content: encrypted
@@ -337,8 +446,10 @@ function handleUsernameChange(ws, data) {
       oldUsername: oldUsername,
       newUsername: data.newUsername
     };
+    console.log(`Broadcasting username change notification:`, changeNotification);
     broadcastMessage(changeNotification);
 
+    console.log(`Broadcasting updated user list after username change`);
     broadcastUserList();
     console.log(`Username changed: ${oldUsername} -> ${data.newUsername}`);
   }
@@ -351,7 +462,7 @@ function handlePing(ws) {
     timestamp: new Date().toISOString()
   };
 
-  const encrypted = crypto.AES.encrypt(JSON.stringify(pongMessage), 'secret-key').toString();
+  const encrypted = crypto.AES.encrypt(JSON.stringify(pongMessage), AES_SECRET_KEY).toString();
   const packet = {
     type: 'encrypted',
     content: encrypted
@@ -395,14 +506,13 @@ function handleFileTransfer(data) {
 function broadcastMessage(message) {
   if (!wss) return;
 
-  const encrypted = crypto.AES.encrypt(JSON.stringify(message), 'secret-key').toString();
-  const packet = {
-    type: 'encrypted',
-    content: encrypted
-  };
-
   wss.clients.forEach(client => {
-    if (client.readyState === WebSocket.OPEN) {
+    if (client.readyState === WebSocket.OPEN && client.sessionKey) {
+      const encrypted = crypto.AES.encrypt(JSON.stringify(message), client.sessionKey).toString();
+      const packet = {
+        type: 'encrypted',
+        content: encrypted
+      };
       client.send(JSON.stringify(packet));
     }
   });
@@ -412,14 +522,13 @@ function broadcastMessage(message) {
 function sendToUser(userId, message) {
   if (!wss) return;
 
-  const encrypted = crypto.AES.encrypt(JSON.stringify(message), 'secret-key').toString();
-  const packet = {
-    type: 'encrypted',
-    content: encrypted
-  };
-
   wss.clients.forEach(client => {
-    if (client.userId === userId && client.readyState === WebSocket.OPEN) {
+    if (client.userId === userId && client.readyState === WebSocket.OPEN && client.sessionKey) {
+      const encrypted = crypto.AES.encrypt(JSON.stringify(message), client.sessionKey).toString();
+      const packet = {
+        type: 'encrypted',
+        content: encrypted
+      };
       client.send(JSON.stringify(packet));
     }
   });

@@ -1,6 +1,9 @@
 const { ipcRenderer } = require('electron');
 const WebSocket = require('ws');
 const crypto = require('crypto-js');
+const cryptoNode = require('crypto');
+const fs = require('fs');
+const path = require('path');
 
 
 let ws;
@@ -12,6 +15,24 @@ let currentLanguage = 'en';
 let userMap = new Map(); // Map to store userId -> username
 let messageHistory = new Map(); // Map to store messages by conversation
 let isLocked = false;
+
+// Log to file for debugging
+const logFile = path.join(__dirname, 'client_debug.log');
+function logToFile(message) {
+  const timestamp = new Date().toISOString();
+  const logMessage = `[${timestamp}] ${message}\n`;
+  try {
+    fs.appendFileSync(logFile, logMessage);
+  } catch (error) {
+    console.error('Failed to write to log file:', error);
+  }
+}
+
+// RSA key pair for client
+let clientPublicKey;
+let clientPrivateKey;
+let serverPublicKey;
+let sessionKey;
 
 // Language data
 const languages = {
@@ -314,6 +335,16 @@ async function init() {
   setupEventListeners();
   loadMessageHistory();
 
+  // Generate RSA key pair for client
+  const keyPair = cryptoNode.generateKeyPairSync('rsa', {
+    modulusLength: 2048,
+    publicKeyEncoding: { type: 'pkcs1', format: 'pem' },
+    privateKeyEncoding: { type: 'pkcs1', format: 'pem' }
+  });
+  clientPublicKey = keyPair.publicKey;
+  clientPrivateKey = keyPair.privateKey;
+  console.log('Client RSA key pair generated');
+
   console.log('Setting initial screen visibility...');
   // Initially hide all screens
   lockScreen.classList.add('hidden');
@@ -457,7 +488,12 @@ async function unlockApp() {
   const isValid = await ipcRenderer.invoke('verify-password', password);
   if (isValid) {
     // Save password to localStorage for future use
+    console.log(`Saving password to localStorage: "${password}" (length: ${password.length})`);
     localStorage.setItem('password', password);
+    console.log('Password saved to localStorage, verifying...');
+    const savedPassword = localStorage.getItem('password');
+    console.log(`Verified saved password: "${savedPassword}" (length: ${savedPassword ? savedPassword.length : 0})`);
+
     await ipcRenderer.invoke('unlock-app');
     lockScreen.classList.add('hidden');
     disableMessageControls('connectingToServerMsg');
@@ -478,24 +514,35 @@ async function resetApp() {
     localStorage.removeItem('userId');
     localStorage.removeItem('username');
     localStorage.removeItem('token');
+    localStorage.removeItem('password');
     await ipcRenderer.invoke('reset-app');
     // Reload the app
     location.reload();
   }
 }
 
+// Clear stored credentials for new registration (keep password)
+function clearStoredCredentials() {
+  console.log('Clearing stored credentials (keeping password)...');
+  localStorage.removeItem('userId');
+  localStorage.removeItem('username');
+  localStorage.removeItem('token');
+  // Keep password - don't remove it
+  console.log('Stored credentials cleared (password preserved)');
+}
+
 // Show connection screen
 function showConnectionScreen() {
   console.log('=== SHOWING CONNECTION SCREEN ===');
   connectionScreen.classList.remove('hidden');
-  mainApp.classList.add('hidden');
-  
+  mainApp.classList.add('hidden'); // Ensure main app is hidden
+
   // Disable message controls while connecting
   disableMessageControls('connectingToServerMsg');
-  
+
   updateConnectionStatus('connectingToServer', 'searchingServers');
   console.log('Connection screen visible, starting connection process...');
-  
+
   // Always start connection process when showing connection screen
   setTimeout(() => {
     console.log('Starting server connection...');
@@ -624,10 +671,10 @@ function registerUser() {
   const username = usernameInput.value.trim();
   if (!username) return;
 
-  // Show connection screen
+  // Show connection screen and keep main app hidden
   connectionScreen.classList.remove('hidden');
   mainApp.classList.add('hidden');
-  
+
   updateConnectionStatus('Connecting...', `Registering as ${username}...`);
 
   // Close existing connection if any
@@ -679,7 +726,13 @@ function discoverServers(username) {
 
   // Timeout after 5 seconds
   setTimeout(() => {
-    discoveryClient.close();
+    try {
+      if (discoveryClient && typeof discoveryClient.close === 'function') {
+        discoveryClient.close();
+      }
+    } catch (error) {
+      console.log('Discovery client already closed or error closing:', error.message);
+    }
     // If no server found, try localhost as fallback
     if (!ws || ws.readyState !== WebSocket.OPEN) {
       updateConnectionStatus('No Server Found', 'Trying localhost as fallback...');
@@ -716,31 +769,15 @@ function connectToServer(username, serverIP = 'localhost') {
   }
 
   ws.onopen = () => {
-    console.log(`=== WEBSOCKET CONNECTED ===`);
-    console.log(`Server: ${serverIP}:8080`);
-    updateConnectionStatus('Connected!', 'Registering username...');
+    const logMessage = `=== WEBSOCKET CONNECTED === Server: ${serverIP}:8080, readyState: ${ws.readyState}`;
+    console.log(logMessage);
+    logToFile(logMessage);
+    updateConnectionStatus('Connected!', 'Waiting for server public key...');
 
-    // Load saved userId, username, token, and password if exists
-    const savedUserId = localStorage.getItem('userId');
-    const savedUsername = localStorage.getItem('username') || username;
-    const savedToken = localStorage.getItem('token');
-    const savedPassword = localStorage.getItem('password');
-
-    console.log('Client data from localStorage:');
-    console.log(`userId: ${savedUserId}`);
-    console.log(`username: ${savedUsername}`);
-    console.log(`token: ${savedToken ? 'present' : 'null'}`);
-    console.log(`password: ${savedPassword ? 'present' : 'null'}`);
-
-    const registerMessage = {
-      type: 'register',
-      username: savedUsername,
-      userId: savedUserId, // Send saved userId for persistence
-      token: savedToken, // Send saved token for authentication
-      password: savedPassword // Send saved password for decryption
-    };
-    console.log('Sending registration message:', registerMessage);
-    ws.send(JSON.stringify(registerMessage));
+    // Set flag that connection is ready
+    ws.connectionReady = true;
+    console.log('Connection ready flag set to true');
+    logToFile('Connection ready flag set to true');
 
     // Start ping interval
     if (pingInterval) clearInterval(pingInterval);
@@ -752,8 +789,11 @@ function connectToServer(username, serverIP = 'localhost') {
   };
 
   ws.onmessage = (event) => {
-    console.log('=== RECEIVED MESSAGE ===');
+    const logMessage = `=== RECEIVED MESSAGE === Length: ${event.data.length}, ReadyState: ${ws.readyState}`;
+    console.log(logMessage);
     console.log('Raw data:', event.data);
+    logToFile(logMessage);
+    logToFile(`Raw data: ${event.data}`);
     handleServerMessage(event.data);
   };
 
@@ -793,19 +833,13 @@ function connectToServer(username, serverIP = 'localhost') {
     if (serverIP !== 'localhost') {
       console.log('Retrying with localhost...');
       setTimeout(() => connectToServer(username, 'localhost'), 2000);
-    } else {
-      console.log('Connection to localhost failed, showing manual setup...');
-      updateConnectionStatus('Connection Failed', 'Unable to connect to server. Please check if the server is running.');
-      // Show username setup after connection failure
-      setTimeout(() => {
-        console.log('Showing manual username setup...');
-        connectionScreen.classList.add('hidden');
-        mainApp.classList.remove('hidden');
-        userSetup.classList.remove('hidden');
-        userList.classList.add('hidden');
-        disableMessageControls('notConnectedRegister');
-      }, 3000);
-    }
+   } else {
+     console.log('Connection to localhost failed, keeping connection screen...');
+     updateConnectionStatus('Connection Failed', 'Unable to connect to server. Please check if the server is running.');
+     // Keep connection screen visible and disable message controls
+     disableMessageControls('connectionFailedRetrying');
+     // Do not show main app until connection is successful
+   }
   };
 }
 
@@ -825,22 +859,66 @@ function handleServerMessage(data) {
     const message = JSON.parse(data);
     console.log('Parsed message:', message);
     console.log('Message type:', message.type);
+    console.log('Full message data:', JSON.stringify(message, null, 2));
 
     if (message.type === 'encrypted') {
       console.log('Decrypting message...');
-      const decrypted = crypto.AES.decrypt(message.content, 'secret-key').toString(crypto.enc.Utf8);
-      const parsedData = JSON.parse(decrypted);
-      console.log('Decrypted data:', parsedData);
-      handleDecryptedMessage(parsedData);
-    } else if (message.type === 'registration_success') {
-      console.log('Registration successful!', message);
-      handleRegistrationSuccess(message);
-    } else if (message.type === 'registration_error') {
-      console.log('Registration error:', message);
-      handleRegistrationError(message);
+      if (sessionKey) {
+        const decrypted = crypto.AES.decrypt(message.content, sessionKey).toString(crypto.enc.Utf8);
+        const parsedData = JSON.parse(decrypted);
+        console.log('Decrypted data:', parsedData);
+        handleDecryptedMessage(parsedData);
+      } else {
+        console.error('Session key not established');
+      }
+  } else if (message.type === 'registration_success') {
+    console.log('Registration successful!', message);
+    handleRegistrationSuccess(message);
+  } else if (message.type === 'encrypted' && sessionKey) {
+    // Handle encrypted registration_success
+    const decrypted = crypto.AES.decrypt(message.content, sessionKey).toString(crypto.enc.Utf8);
+    const parsedData = JSON.parse(decrypted);
+    if (parsedData.type === 'registration_success') {
+      console.log('Decrypted registration successful!', parsedData);
+      handleRegistrationSuccess(parsedData);
     } else {
-      console.log('Unknown message type:', message.type);
+      handleDecryptedMessage(parsedData);
     }
+   } else if (message.type === 'server_public_key') {
+    console.log('Received server public key');
+    logToFile('Received server public key');
+    serverPublicKey = message.publicKey;
+    // Generate session key and send encrypted
+    sessionKey = crypto.lib.WordArray.random(32).toString(); // 256-bit key
+    console.log('Generated session key');
+    logToFile('Generated session key');
+    const encryptedSessionKey = cryptoNode.publicEncrypt(serverPublicKey, Buffer.from(sessionKey));
+    console.log('Encrypted session key with server public key');
+    logToFile('Encrypted session key with server public key');
+    ws.send(JSON.stringify({
+      type: 'client_public_key',
+      publicKey: clientPublicKey,
+      encryptedSessionKey: encryptedSessionKey.toString('base64')
+    }));
+    console.log('Sent client public key and encrypted session key to server');
+    logToFile('Sent client public key and encrypted session key to server');
+
+    // Now send registration message after public key exchange
+    if (ws.connectionReady) {
+      console.log('Connection ready, sending registration message');
+      logToFile('Connection ready, sending registration message');
+      const username = window.tempUsername || 'User';
+      sendRegistrationMessage(username);
+    } else {
+      console.log('Connection not ready yet');
+      logToFile('Connection not ready yet');
+    }
+  } else if (message.type === 'registration_error') {
+    console.log('Registration error:', message);
+    handleRegistrationError(message);
+  } else {
+    console.log('Unknown message type:', message.type);
+  }
   } catch (error) {
     console.error('Error handling server message:', error);
     console.error('Raw data was:', data);
@@ -851,6 +929,10 @@ function handleServerMessage(data) {
 function handleDecryptedMessage(data) {
   console.log('Handling decrypted message:', data); // Debug log
   switch (data.type) {
+    case 'registration_success':
+      console.log('Decrypted registration successful!', data);
+      handleRegistrationSuccess(data);
+      break;
     case 'message':
       displayMessage(data);
       break;
@@ -880,14 +962,16 @@ function handleRegistrationSuccess(message) {
 
   currentUser = {
     id: message.userId,
-    name: username
+    name: message.username
   };
 
-  // Save userId, username, token, and password to localStorage for persistence
+  // Save userId, token, and password to localStorage for persistence
+  // Username is now managed by server
+  console.log(`Saving to localStorage: userId=${message.userId}, token=${message.token ? 'present' : 'null'}`);
   localStorage.setItem('userId', message.userId);
-  localStorage.setItem('username', username);
   if (message.token) {
     localStorage.setItem('token', message.token);
+    console.log('Token saved to localStorage');
   }
   // Note: Password is already saved when entered, but ensure it's stored
   // Password saving is handled in password setup or login
@@ -897,7 +981,7 @@ function handleRegistrationSuccess(message) {
 
   changeUsernameBtn.textContent = `${currentUser.name}`;
 
-  // Hide connection screen and show main app
+  // Hide connection screen and show main app only after successful registration
   connectionScreen.classList.add('hidden');
   mainApp.classList.remove('hidden');
 
@@ -960,15 +1044,26 @@ function updateUserList(users) {
 function handleRegistrationError(message) {
   console.error(`Registration failed: ${message.error}`);
   alert(`Registration failed: ${message.error}`);
-  
-  // Hide connection screen and show main app for retry
-  connectionScreen.classList.add('hidden');
-  mainApp.classList.remove('hidden');
+
+  // If token is invalid, clear stored credentials and retry
+  if (message.error.includes('Invalid token') || message.error.includes('Invalid or expired token') || message.error.includes('Malformed UTF-8')) {
+    console.log('Token invalid, clearing stored credentials and retrying...');
+    clearStoredCredentials();
+    // After clearing credentials, restart the connection process
+    setTimeout(() => {
+      console.log('Restarting connection process after clearing credentials...');
+      startServerConnection();
+    }, 1000);
+  }
+
+  // Keep connection screen visible and show user setup for retry
+  connectionScreen.classList.remove('hidden');
+  mainApp.classList.add('hidden');
   userSetup.classList.remove('hidden');
-  
+
   // Keep message controls disabled until successful connection
-  disableMessageControls('connectionLostReconnecting');
-  
+  disableMessageControls('connectionFailedRegister');
+
   usernameInput.focus();
   usernameInput.select();
 }
@@ -1071,15 +1166,102 @@ function adjustTextareaHeight() {
   messageInput.style.height = messageInput.scrollHeight + 'px';
 }
 
+// Send registration message after public key exchange
+function sendRegistrationMessage(username) {
+  updateConnectionStatus('Connected!', 'Registering username...');
+
+  // Check if localStorage is available
+  console.log('Checking localStorage availability...');
+  logToFile('Checking localStorage availability...');
+  try {
+    const testKey = '__test__';
+    localStorage.setItem(testKey, 'test');
+    localStorage.removeItem(testKey);
+    console.log('localStorage is available');
+    logToFile('localStorage is available');
+  } catch (error) {
+    console.error('localStorage is not available:', error);
+    logToFile(`localStorage is not available: ${error.message}`);
+  }
+
+  // Load saved userId, token, and password if exists
+  console.log('Loading data from localStorage...');
+  logToFile('Loading data from localStorage...');
+  const savedUserId = localStorage.getItem('userId');
+  const savedToken = localStorage.getItem('token');
+  const savedPassword = localStorage.getItem('password');
+
+  console.log('Client data from localStorage:');
+  console.log(`userId: ${savedUserId}`);
+  console.log(`token: ${savedToken ? 'present' : 'null'}`);
+  console.log(`password: ${savedPassword ? 'present' : 'null'}`);
+  logToFile(`Client data - userId: ${savedUserId}, token: ${savedToken ? 'present' : 'null'}, password: ${savedPassword ? 'present' : 'null'}`);
+  if (savedPassword) {
+    console.log(`password length: ${savedPassword.length}`);
+    console.log(`password value: "${savedPassword}"`);
+    logToFile(`Password length: ${savedPassword.length}`);
+  } else {
+    console.log('No password in localStorage, will send null');
+    logToFile('No password in localStorage, will send null');
+    // Try to get all localStorage keys to debug
+    console.log('All localStorage keys:');
+    let allKeys = 'All localStorage keys:';
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      const value = localStorage.getItem(key);
+      console.log(`  ${key}: ${value}`);
+      allKeys += ` ${key}=${value};`;
+    }
+    logToFile(allKeys);
+  }
+
+  // Encrypt password with server's public key (now available)
+  let encryptedPassword = savedPassword;
+  console.log(`Original password: "${savedPassword}" (length: ${savedPassword ? savedPassword.length : 0})`);
+  logToFile(`Original password length: ${savedPassword ? savedPassword.length : 0}`);
+  if (savedPassword && serverPublicKey) {
+    try {
+      encryptedPassword = cryptoNode.publicEncrypt(serverPublicKey, Buffer.from(savedPassword)).toString('base64');
+      console.log('Password encrypted with server public key');
+      console.log(`Encrypted password length: ${encryptedPassword.length}`);
+      logToFile(`Password encrypted, length: ${encryptedPassword.length}`);
+    } catch (error) {
+      console.log('Password encryption failed:', error.message);
+      logToFile(`Password encryption failed: ${error.message}`);
+      encryptedPassword = savedPassword; // Fall back to original password
+    }
+  } else if (!savedPassword) {
+    console.log('No saved password found');
+    logToFile('No saved password found');
+    encryptedPassword = null;
+  }
+
+  const registerMessage = {
+    type: 'register',
+    username: username, // Send username for initial registration
+    userId: savedUserId, // Send saved userId for persistence
+    token: savedToken, // Send saved token for authentication
+    password: encryptedPassword, // Send encrypted password
+    passwordEncrypted: true // Always encrypted now
+  };
+  console.log('Sending registration message:', registerMessage);
+  logToFile(`Sending registration message: userId=${savedUserId}, token=${savedToken ? 'present' : 'null'}, password=${encryptedPassword ? 'encrypted' : 'null'}`);
+  ws.send(JSON.stringify(registerMessage));
+}
+
 // Send encrypted message
 function sendEncryptedMessage(data) {
-  const encrypted = crypto.AES.encrypt(JSON.stringify(data), 'secret-key').toString();
-  const packet = {
-    type: 'encrypted',
-    content: encrypted
-  };
+  if (sessionKey) {
+    const encrypted = crypto.AES.encrypt(JSON.stringify(data), sessionKey).toString();
+    const packet = {
+      type: 'encrypted',
+      content: encrypted
+    };
 
-  ws.send(JSON.stringify(packet));
+    ws.send(JSON.stringify(packet));
+  } else {
+    console.error('Session key not established, cannot send encrypted message');
+  }
 }
 
 // Display message (for incoming messages)
@@ -1429,30 +1611,43 @@ function closeUsernameModal() {
 // Confirm username change
 function confirmUsernameChange() {
   const newUsername = newUsernameInput.value.trim();
+  console.log(`=== CONFIRMING USERNAME CHANGE ===`);
+  console.log(`Current username: ${currentUser.name}`);
+  console.log(`New username: ${newUsername}`);
   if (newUsername && newUsername !== currentUser.name) {
     const changeData = {
       type: 'change_username',
       newUsername: newUsername
     };
+    console.log(`Sending change_username message:`, changeData);
     sendEncryptedMessage(changeData);
     closeUsernameModal();
   } else {
+    console.log('Username change cancelled or invalid');
     closeUsernameModal();
   }
 }
 
 // Handle username changed notification
 function handleUsernameChanged(data) {
+  console.log(`=== HANDLING USERNAME CHANGED NOTIFICATION ===`);
+  console.log(`Notification data:`, data);
+  console.log(`Current user ID: ${currentUser.id}`);
   if (data.userId === currentUser.id) {
+    console.log(`Updating own username: ${currentUser.name} -> ${data.newUsername}`);
     // Update own username
     currentUser.name = data.newUsername;
     changeUsernameBtn.textContent = `${currentUser.name}`;
+  } else {
+    console.log(`Username changed for other user: ${data.userId}`);
   }
   // User list will be updated via user_list message
 }
 
 // Handle username change error
 function handleUsernameChangeError(data) {
+  console.log(`=== HANDLING USERNAME CHANGE ERROR ===`);
+  console.log(`Error data:`, data);
   alert(`Username change failed: ${data.error}`);
 }
 
