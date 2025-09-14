@@ -259,14 +259,15 @@ const themeToggle = document.getElementById('theme-toggle');
 const themeIcon = document.getElementById('theme-icon');
 const screenshotBtn = document.getElementById('screenshot-btn');
 const debugBtn = document.getElementById('debug-btn');
+const lockBtn = document.getElementById('lock-btn');
 
- const languageSelect = document.getElementById('language-select');
-  const changeUsernameBtn = document.getElementById('change-username-btn');
-  const usernameModal = document.getElementById('username-modal');
-  const newUsernameInput = document.getElementById('new-username-input');
-  const modalCancelBtn = document.getElementById('modal-cancel-btn');
-  const modalConfirmBtn = document.getElementById('modal-confirm-btn');
-  const modalClose = document.querySelector('.modal-close');
+const languageSelect = document.getElementById('language-select');
+const changeUsernameBtn = document.getElementById('change-username-btn');
+const usernameModal = document.getElementById('username-modal');
+const newUsernameInput = document.getElementById('new-username-input');
+const modalCancelBtn = document.getElementById('modal-cancel-btn');
+const modalConfirmBtn = document.getElementById('modal-confirm-btn');
+const modalClose = document.querySelector('.modal-close');
 
 // Update UI texts based on selected language
 function updateTexts() {
@@ -367,6 +368,7 @@ function showLockScreen() {
   lockError.classList.add('hidden')
   connectionScreen.classList.add('hidden');
   mainApp.classList.add('hidden');
+  passwordInput.value = '';
   passwordInput.focus();
 }
 
@@ -565,6 +567,8 @@ function setupEventListeners() {
     themeToggle.addEventListener('click', toggleTheme);
     screenshotBtn.addEventListener('click', takeScreenshot);
     debugBtn.addEventListener('click', openDevTools);
+    lockBtn.addEventListener('click', lockApp);
+
 
     changeUsernameBtn.addEventListener('click', changeUsername);
     languageSelect.addEventListener('change', changeLanguage);
@@ -1357,6 +1361,11 @@ async function takeScreenshot() {
 // Open DevTools
 async function openDevTools() {
   await ipcRenderer.invoke('open-dev-tools');
+}
+
+// Lock App
+async function lockApp() {
+  init();
 }
 
 // Change language
