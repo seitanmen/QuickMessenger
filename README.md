@@ -180,9 +180,7 @@ The authentication system follows these steps:
 ## Contributing
 
 1. Fork the repository.
-2. Create a feature branch: `git checkout -b feature/your-feature`.
-3. Commit changes: `git commit -am 'Add your feature'`.
-4. Push to the branch: `git push origin feature/your-feature`.
+2. Improve the code.
 5. Submit a pull request.
 
 Please focus on security improvements and follow the existing code style.
