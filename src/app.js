@@ -34,6 +34,22 @@ let clientPrivateKey;
 let serverPublicKey;
 let sessionKey;
 
+// Password strength validation
+function validatePasswordStrength(password) {
+  const minLength = 8;
+  const hasUpper = /[A-Z]/.test(password);
+  const hasLower = /[a-z]/.test(password);
+  const hasNumber = /\d/.test(password);
+  const hasSpecial = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password);
+
+  if (password.length < minLength) return 'Password must be at least 8 characters long.';
+  if (!hasUpper) return 'Password must contain at least one uppercase letter.';
+  if (!hasLower) return 'Password must contain at least one lowercase letter.';
+  if (!hasNumber) return 'Password must contain at least one number.';
+  if (!hasSpecial) return 'Password must contain at least one special character.';
+  return null; // Valid
+}
+
 // Language data
 const languages = {
   en: {
@@ -335,6 +351,13 @@ async function init() {
   setupEventListeners();
   loadMessageHistory();
 
+  // Load saved username and update UI
+  const savedUsername = localStorage.getItem('username');
+  if (savedUsername) {
+    changeUsernameBtn.textContent = savedUsername;
+    console.log(`Loaded saved username: ${savedUsername}`);
+  }
+
   // Generate RSA key pair for client
   const keyPair = cryptoNode.generateKeyPairSync('rsa', {
     modulusLength: 2048,
@@ -455,8 +478,9 @@ async function setPassword() {
     return;
   }
 
-  if (password.length < 4) {
-    errorDiv.textContent = lang.passwordTooShort;
+  const strengthError = validatePasswordStrength(password);
+  if (strengthError) {
+    errorDiv.textContent = strengthError;
     return;
   }
 
@@ -552,21 +576,25 @@ function showConnectionScreen() {
 
 // Start server connection process
 function startServerConnection() {
-  const defaultUsername = 'User_' + Math.floor(Math.random() * 1000);
+  // Use saved username if available, otherwise generate default
+  let username = localStorage.getItem('username');
+  if (!username) {
+    username = 'User_' + Math.floor(Math.random() * 1000);
+  }
   console.log(`=== STARTING SERVER CONNECTION ===`);
-  console.log(`Username: ${defaultUsername}`);
+  console.log(`Username: ${username}`);
   console.log('Attempting localhost connection first...');
-  
+
   const lang = languages[currentLanguage];
-  updateConnectionStatus('connectingTitle', `${lang.tryingWith} localhost ${lang.with} ${defaultUsername}...`);
-  
+  updateConnectionStatus('connectingTitle', `${lang.tryingWith} localhost ${lang.with} ${username}...`);
+
   // First try to connect to localhost
-  connectToServer(defaultUsername, 'localhost');
-  
+  connectToServer(username, 'localhost');
+
   // Wait a bit, then also try discovery
   setTimeout(() => {
     console.log('Starting server discovery...');
-    discoverServers(defaultUsername);
+    discoverServers(username);
   }, 2000);
 }
 
@@ -759,14 +787,14 @@ function connectToServer(username, serverIP = 'localhost') {
     ws.close();
   }
   
-  try {
-    ws = new WebSocket(`ws://${serverIP}:8080`);
-    console.log('WebSocket object created, waiting for connection...');
-  } catch (error) {
-    console.error('Error creating WebSocket:', error);
-    updateConnectionStatus('Connection Failed', `Error: ${error.message}`);
-    return;
-  }
+   try {
+     ws = new WebSocket(`wss://${serverIP}:8080`);
+     console.log('WebSocket object created, waiting for connection...');
+   } catch (error) {
+     console.error('Error creating WebSocket:', error);
+     updateConnectionStatus('Connection Failed', `Error: ${error.message}`);
+     return;
+   }
 
   ws.onopen = () => {
     const logMessage = `=== WEBSOCKET CONNECTED === Server: ${serverIP}:8080, readyState: ${ws.readyState}`;
@@ -818,29 +846,40 @@ function connectToServer(username, serverIP = 'localhost') {
     }, 5000);
   };
 
-  ws.onerror = (error) => {
-    console.error('=== WEBSOCKET ERROR ===');
-    console.error('Error event:', error);
-    console.error('WebSocket state:', ws ? ws.readyState : 'ws is null');
-    
-    clearInterval(pingInterval);
-    updateConnectionStatus('Connection Failed', `Error connecting to ${serverIP}`);
-    
-    // Keep message controls disabled during connection failure
-    disableMessageControls('connectionFailedRetrying');
-    
-    // Try connecting to localhost if connection fails
-    if (serverIP !== 'localhost') {
-      console.log('Retrying with localhost...');
-      setTimeout(() => connectToServer(username, 'localhost'), 2000);
-   } else {
-     console.log('Connection to localhost failed, keeping connection screen...');
-     updateConnectionStatus('Connection Failed', 'Unable to connect to server. Please check if the server is running.');
-     // Keep connection screen visible and disable message controls
+   ws.onerror = (error) => {
+     console.error('=== WEBSOCKET ERROR ===');
+     console.error('Error event:', error);
+     console.error('WebSocket state:', ws ? ws.readyState : 'ws is null');
+
+     clearInterval(pingInterval);
+
+     // Check if it's a certificate error
+     if (error.message && (error.message.includes('certificate') || error.message.includes('CERT') || error.message.includes('SSL'))) {
+       console.log('Certificate error detected, attempting to ignore certificate...');
+       // For Electron, we can try to ignore certificate errors
+       process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
+       updateConnectionStatus('Connection Failed', 'Certificate error. Retrying...');
+       setTimeout(() => connectToServer(username, serverIP), 1000);
+       return;
+     }
+
+     updateConnectionStatus('Connection Failed', `Error connecting to ${serverIP}`);
+
+     // Keep message controls disabled during connection failure
      disableMessageControls('connectionFailedRetrying');
-     // Do not show main app until connection is successful
-   }
-  };
+
+     // Try connecting to localhost if connection fails
+     if (serverIP !== 'localhost') {
+       console.log('Retrying with localhost...');
+       setTimeout(() => connectToServer(username, 'localhost'), 2000);
+    } else {
+      console.log('Connection to localhost failed, keeping connection screen...');
+      updateConnectionStatus('Connection Failed', 'Unable to connect to server. Please check if the server is running.');
+      // Keep connection screen visible and disable message controls
+      disableMessageControls('connectionFailedRetrying');
+      // Do not show main app until connection is successful
+    }
+   };
 }
 
 // Send ping message
@@ -965,10 +1004,11 @@ function handleRegistrationSuccess(message) {
     name: message.username
   };
 
-  // Save userId, token, and password to localStorage for persistence
+  // Save userId, token, username, and password to localStorage for persistence
   // Username is now managed by server
-  console.log(`Saving to localStorage: userId=${message.userId}, token=${message.token ? 'present' : 'null'}`);
+  console.log(`Saving to localStorage: userId=${message.userId}, token=${message.token ? 'present' : 'null'}, username=${message.username}`);
   localStorage.setItem('userId', message.userId);
+  localStorage.setItem('username', message.username); // Save username to localStorage
   if (message.token) {
     localStorage.setItem('token', message.token);
     console.log('Token saved to localStorage');
@@ -1238,14 +1278,12 @@ function sendRegistrationMessage(username) {
 
   const registerMessage = {
     type: 'register',
-    username: username, // Send username for initial registration
-    userId: savedUserId, // Send saved userId for persistence
     token: savedToken, // Send saved token for authentication
     password: encryptedPassword, // Send encrypted password
     passwordEncrypted: true // Always encrypted now
   };
   console.log('Sending registration message:', registerMessage);
-  logToFile(`Sending registration message: userId=${savedUserId}, token=${savedToken ? 'present' : 'null'}, password=${encryptedPassword ? 'encrypted' : 'null'}`);
+  logToFile(`Sending registration message: token=${savedToken ? 'present' : 'null'}, password=${encryptedPassword ? 'encrypted' : 'null'}`);
   ws.send(JSON.stringify(registerMessage));
 }
 
@@ -1638,6 +1676,7 @@ function handleUsernameChanged(data) {
     console.log(`Updating own username: ${currentUser.name} -> ${data.newUsername}`);
     // Update own username
     currentUser.name = data.newUsername;
+    localStorage.setItem('username', data.newUsername); // Save updated username to localStorage
     changeUsernameBtn.textContent = `${currentUser.name}`;
   } else {
     console.log(`Username changed for other user: ${data.userId}`);

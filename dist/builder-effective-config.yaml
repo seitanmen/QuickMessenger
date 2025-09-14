@@ -3,11 +3,6 @@ directories:
   buildResources: build
 appId: com.quickmessenger.app
 productName: QuickMessenger
-mac:
-  icon: icon/icon.icns
-win:
-  icon: icon/icon.ico
-linux:
-  icon: icon/icon.png
+icon: icon/icon.png
 files: []
 electronVersion: 38.1.0

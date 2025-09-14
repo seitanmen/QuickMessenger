@@ -8,8 +8,18 @@
  const dgram = require('dgram');
  const path = require('path');
  const jwt = require('jsonwebtoken');
+const speakeasy = require('speakeasy');
 
-
+// Audit logging function
+function logAudit(event, details) {
+  const logEntry = {
+    timestamp: new Date().toISOString(),
+    event,
+    ...details
+  };
+  const encryptedLog = crypto.AES.encrypt(JSON.stringify(logEntry), process.env.DB_ENCRYPTION_KEY).toString();
+  fs.appendFileSync(path.join(__dirname, 'audit.log'), encryptedLog + '\n');
+}
 
 // Check for required environment variables
 if (!process.env.JWT_SECRET) {
@@ -26,12 +36,23 @@ const AES_SECRET_KEY = process.env.AES_SECRET_KEY;
 
 
 
-// Generate RSA key pair for server
-const { publicKey: serverPublicKey, privateKey: serverPrivateKey } = cryptoNode.generateKeyPairSync('rsa', {
-  modulusLength: 2048,
-  publicKeyEncoding: { type: 'pkcs1', format: 'pem' },
-  privateKeyEncoding: { type: 'pkcs1', format: 'pem' }
-});
+// Load or generate RSA key pair for server
+let serverPublicKey = process.env.RSA_PUBLIC_KEY;
+let serverPrivateKey = process.env.RSA_PRIVATE_KEY;
+
+if (!serverPublicKey || !serverPrivateKey) {
+  console.log('Generating new RSA key pair...');
+  const { publicKey, privateKey } = cryptoNode.generateKeyPairSync('rsa', {
+    modulusLength: 2048,
+    publicKeyEncoding: { type: 'pkcs1', format: 'pem' },
+    privateKeyEncoding: { type: 'pkcs1', format: 'pem' }
+  });
+  serverPublicKey = publicKey;
+  serverPrivateKey = privateKey;
+  console.log('RSA key pair generated. Please save to environment variables for persistence.');
+} else {
+  console.log('RSA key pair loaded from environment variables.');
+}
 
 let wss;
 let clients = new Map();
@@ -39,6 +60,37 @@ let discoveryServer;
 let discoveryClient;
 let messageHistory = [];
 let userSessions = new Map();
+let userDatabase = new Map(); // userId -> username
+
+// Load user database from file
+function loadUserDatabase() {
+  try {
+    const encryptedData = fs.readFileSync(path.join(__dirname, 'users.json'), 'utf8');
+    const decrypted = crypto.AES.decrypt(encryptedData, process.env.DB_ENCRYPTION_KEY).toString(crypto.enc.Utf8);
+    const parsed = JSON.parse(decrypted);
+    userDatabase = new Map(Object.entries(parsed));
+    console.log('Loaded user database:', Object.fromEntries(userDatabase));
+  } catch (error) {
+    console.log('No user database file found, starting with empty database');
+    userDatabase = new Map();
+  }
+}
+
+// Save user database to file
+function saveUserDatabase() {
+  try {
+    const data = {};
+    for (const [key, value] of userDatabase) {
+      data[key] = value;
+    }
+    console.log('Saving user database:', data);
+    const encrypted = crypto.AES.encrypt(JSON.stringify(data), process.env.DB_ENCRYPTION_KEY).toString();
+    fs.writeFileSync(path.join(__dirname, 'users.json'), encrypted);
+    console.log('User database saved successfully');
+  } catch (error) {
+    console.error('Error saving user database:', error);
+  }
+}
 
 // Load message history from file
 function loadMessageHistory() {
@@ -113,10 +165,18 @@ function initNetworkDiscovery() {
   });
 }
 
-// Initialize WebSocket server
+// Initialize WebSocket server with HTTPS
 function initWebSocketServer() {
   try {
-    wss = new WebSocket.Server({ port: 8080, host: '0.0.0.0' });
+    const https = require('https');
+    const server = https.createServer({
+      cert: fs.readFileSync(path.join(__dirname, 'cert.pem')),
+      key: fs.readFileSync(path.join(__dirname, 'key.pem'))
+    });
+    wss = new WebSocket.Server({ server });
+    server.listen(8080, '0.0.0.0', () => {
+      console.log('HTTPS server listening on port 8080');
+    });
 
     wss.on('connection', (ws, req) => {
       const clientId = req.socket.remoteAddress + ':' + req.socket.remotePort;
@@ -223,7 +283,7 @@ function handleMessage(ws, message, clientId) {
 
 // Handle user registration
 function handleUserRegistration(ws, data, clientId) {
-  console.log(`Registration attempt from ${clientId}: username '${data.username}', userId: ${data.userId || 'new'}, token: ${data.token ? 'provided' : 'none'}`);
+  console.log(`Registration attempt from ${clientId}: token: ${data.token ? 'provided' : 'none'}`);
   if (data.token) {
     console.log(`Client token: ${data.token}`);
   }
@@ -232,6 +292,18 @@ function handleUserRegistration(ws, data, clientId) {
   if (data.token) {
     try {
       const decoded = jwt.verify(data.token, JWT_SECRET);
+      // Check IP address (allow localhost and local network variations)
+      const currentIP = ws._socket.remoteAddress;
+      const isLocal = (ip) => ip === '127.0.0.1' || ip === '::1' || ip === '::ffff:127.0.0.1' || ip.startsWith('192.168.') || ip.startsWith('10.') || ip.startsWith('172.');
+      if (decoded.ip && decoded.ip !== currentIP && !(isLocal(decoded.ip) && isLocal(currentIP))) {
+        const errorResponse = {
+          type: 'registration_error',
+          error: 'Token IP mismatch. Please re-authenticate.'
+        };
+        ws.send(JSON.stringify(errorResponse));
+        console.log(`Token IP mismatch: expected ${decoded.ip}, got ${currentIP}`);
+        return;
+      }
       let decryptedUserId;
 
        if (decoded.encryptedUserId) {
@@ -263,28 +335,17 @@ function handleUserRegistration(ws, data, clientId) {
            decryptedUserId = crypto.AES.decrypt(decoded.encryptedUserId, tokenPassword).toString(crypto.enc.Utf8);
            console.log(`Token decoded: encrypted userId decrypted to "${decryptedUserId}", issued at ${new Date(decoded.iat * 1000)}, expires at ${new Date(decoded.exp * 1000)}`);
          }
-         console.log(`Comparing: decrypted="${decryptedUserId}", received="${data.userId}"`);
-       } else {
-         throw new Error('Invalid token format: legacy tokens not supported');
-       }
-
-       if (decryptedUserId !== data.userId) {
-         const errorResponse = {
-           type: 'registration_error',
-           error: 'Invalid token for userId.'
-         };
-         ws.send(JSON.stringify(errorResponse));
-         console.log(`Registration rejected: Token mismatch for userId ${data.userId}`);
-         console.log(`Expected userId: ${decryptedUserId}, received userId: ${data.userId}`);
-         return;
-       }
+        console.log(`UserId from token: "${decryptedUserId}"`);
+      } else {
+        throw new Error('Invalid token format: legacy tokens not supported');
+      }
     } catch (error) {
       const errorResponse = {
         type: 'registration_error',
         error: 'Invalid or expired token.'
       };
       ws.send(JSON.stringify(errorResponse));
-      console.log(`Registration rejected: Invalid token for userId ${data.userId}`);
+      console.log(`Registration rejected: Invalid token`);
       console.log(`Token verification error: ${error.message}`);
       console.log(`Received token: ${data.token ? 'present' : 'null'}`);
       console.log(`Received password: ${data.password ? 'present' : 'null'}`);
@@ -293,47 +354,99 @@ function handleUserRegistration(ws, data, clientId) {
   }
 
   let userId;
+  let username;
   let isReconnect = false;
 
-  if (data.userId && userSessions.has(data.userId)) {
-    // Existing user reconnecting
-    const existingSession = userSessions.get(data.userId);
-    if (existingSession.username !== data.username) {
-      // Username changed, update it
-      existingSession.username = data.username;
-    }
-    userId = data.userId;
-    isReconnect = true;
-    console.log(`User reconnecting: ${data.username} (${userId})`);
-  } else {
-    // Check for duplicate username only for new users
-    for (const [existingUserId, session] of userSessions) {
-      if (session.username === data.username && existingUserId !== data.userId) {
-        // Username already exists, reject registration
-        const errorResponse = {
-          type: 'registration_error',
-          error: 'Username already in use. Please choose a different username.'
-        };
-        ws.send(JSON.stringify(errorResponse));
-        console.log(`Registration rejected: Username '${data.username}' already exists (existing user: ${existingUserId})`);
-        return;
-      }
-    }
+  // Determine userId from token
+  if (data.token) {
+    try {
+      const decoded = jwt.verify(data.token, JWT_SECRET);
+      let decryptedUserId;
 
-    // New user
-    userId = data.userId || crypto.lib.WordArray.random(16).toString();
+      if (decoded.encryptedUserId) {
+        let tokenPassword = data.password;
+        if (data.passwordEncrypted && data.password) {
+          try {
+            tokenPassword = cryptoNode.privateDecrypt(serverPrivateKey, Buffer.from(data.password, 'base64')).toString();
+          } catch (error) {
+            tokenPassword = data.password;
+          }
+        }
+
+        if (!tokenPassword) {
+          try {
+            decryptedUserId = crypto.AES.decrypt(decoded.encryptedUserId, '').toString(crypto.enc.Utf8);
+          } catch (error) {
+            throw new Error('Password required for token validation');
+          }
+        } else {
+          decryptedUserId = crypto.AES.decrypt(decoded.encryptedUserId, tokenPassword).toString(crypto.enc.Utf8);
+        }
+
+        userId = decryptedUserId;
+        console.log(`User identified from token: ${userId}`);
+      } else {
+        throw new Error('Invalid token format');
+      }
+    } catch (error) {
+      const errorResponse = {
+        type: 'registration_error',
+        error: 'Invalid or expired token.'
+      };
+      ws.send(JSON.stringify(errorResponse));
+      console.log(`Token validation failed: ${error.message}`);
+      return;
+    }
+  } else {
+    // New user without token
+    userId = crypto.lib.WordArray.random(16).toString();
   }
 
-  ws.userId = userId;
-  ws.username = data.username;
+  // Check if user exists in database
+  if (userDatabase.has(userId)) {
+    // Existing user - verify TOTP if provided
+    const userData = userDatabase.get(userId);
+    console.log(`User data from database:`, userData);
+    username = userData.username || 'User_' + userId.slice(0, 4);
+    console.log(`Using username from database: ${username}`);
+    if (userData.totpSecret && data.totpCode) {
+      const verified = speakeasy.totp.verify({
+        secret: userData.totpSecret,
+        encoding: 'base32',
+        token: data.totpCode,
+        window: 2
+      });
+      if (!verified) {
+        const errorResponse = {
+          type: 'registration_error',
+          error: 'Invalid TOTP code.'
+        };
+        ws.send(JSON.stringify(errorResponse));
+        console.log(`TOTP verification failed for user ${userId}`);
+        return;
+      }
+      console.log(`TOTP verified for user ${userId}`);
+    }
+    isReconnect = true;
+    console.log(`User reconnecting: ${username} (${userId})`);
+  } else {
+    // New user - generate default username and TOTP secret
+    username = 'User_' + userId.slice(0, 4);
+    const totpSecret = speakeasy.generateSecret({ name: `QuickMessenger:${username}`, issuer: 'QuickMessenger' });
+    userDatabase.set(userId, { username, totpSecret: totpSecret.base32 });
+    saveUserDatabase();
+    console.log(`New user registered: ${username} (${userId}) with TOTP secret`);
+  }
 
-  // Store or update user session
+  // Store session
   userSessions.set(userId, {
     clientId: clientId,
-    username: data.username,
+    username: username,
     connectedAt: new Date().toISOString()
   });
-  // Decrypt password if encrypted
+
+  ws.userId = userId;
+  ws.username = username;
   console.log(`Received password: "${data.password}" (encrypted: ${data.passwordEncrypted})`);
   let decryptedPassword = data.password;
   if (data.passwordEncrypted && data.password) {
@@ -355,14 +468,15 @@ function handleUserRegistration(ws, data, clientId) {
   const encryptedUserId = crypto.AES.encrypt(userId, decryptedPassword).toString();
   console.log(`Encrypted userId: ${encryptedUserId}`);
 
-  // Generate JWT token with encrypted userId
-  const token = jwt.sign({ encryptedUserId }, JWT_SECRET, { expiresIn: '24h' });
+  // Generate JWT token with encrypted userId and IP address
+  const clientIP = ws._socket.remoteAddress;
+  const token = jwt.sign({ encryptedUserId, ip: clientIP }, JWT_SECRET, { expiresIn: '12h' });
   console.log(`Generated token: ${token}`);
 
   const response = {
     type: 'registration_success',
     userId: userId,
-    username: data.username,
+    username: username, // Use the username from server database
     token: token
   };
 
@@ -379,7 +493,14 @@ function handleUserRegistration(ws, data, clientId) {
     ws.send(JSON.stringify(response));
   }
   broadcastUserList();
-  console.log(`${isReconnect ? 'User reconnected' : 'User registered'}: ${data.username} (${userId})`);
+  if (isReconnect) {
+    const existingSession = userSessions.get(userId);
+    console.log(`User reconnected: ${existingSession.username} (${userId})`);
+    logAudit('user_reconnect', { userId, username: existingSession.username, ip: ws._socket.remoteAddress });
+  } else {
+    console.log(`User registered: ${username} (${userId})`);
+    logAudit('user_register', { userId, username, ip: ws._socket.remoteAddress });
+  }
 }
 
 // Handle chat messages
@@ -433,6 +554,20 @@ function handleUsernameChange(ws, data) {
 
     const oldUsername = ws.username;
     ws.username = data.newUsername;
+
+    // Update user database
+    const userData = userDatabase.get(ws.userId);
+    console.log(`Updating user database for ${ws.userId}:`, userData);
+    if (userData) {
+      userData.username = data.newUsername;
+      userDatabase.set(ws.userId, userData);
+      console.log(`Updated user database:`, userData);
+    } else {
+      // If userData doesn't exist, create new entry
+      userDatabase.set(ws.userId, { username: data.newUsername });
+      console.log(`Created new user database entry:`, { username: data.newUsername });
+    }
+    saveUserDatabase();
 
     // Update user session
     if (userSessions.has(ws.userId)) {
@@ -612,6 +747,7 @@ console.log('All sessions cleared.');
 // Start server
 function startServer() {
   console.log('Starting VMT Server...');
+  loadUserDatabase();
   loadMessageHistory();
   initNetworkDiscovery();
   initWebSocketServer();
