@@ -470,6 +470,9 @@ async function unlockApp() {
 async function resetApp() {
   const lang = languages[currentLanguage];
   if (confirm(lang.resetConfirm)) {
+    // Clear localStorage to reset userId and username
+    localStorage.removeItem('userId');
+    localStorage.removeItem('username');
     await ipcRenderer.invoke('reset-app');
     // Reload the app
     location.reload();
@@ -711,10 +714,15 @@ function connectToServer(username, serverIP = 'localhost') {
     console.log(`=== WEBSOCKET CONNECTED ===`);
     console.log(`Server: ${serverIP}:8080`);
     updateConnectionStatus('Connected!', 'Registering username...');
-    
+
+    // Load saved userId if exists
+    const savedUserId = localStorage.getItem('userId');
+    const savedUsername = localStorage.getItem('username') || username;
+
     const registerMessage = {
       type: 'register',
-      username: username
+      username: savedUsername,
+      userId: savedUserId // Send saved userId for persistence
     };
     console.log('Sending registration message:', registerMessage);
     ws.send(JSON.stringify(registerMessage));
@@ -854,27 +862,31 @@ function handleDecryptedMessage(data) {
 function handleRegistrationSuccess(message) {
   // Get username from either input field or the stored temp username
   const username = usernameInput.value || window.tempUsername || 'User';
-  
+
   currentUser = {
     id: message.userId,
     name: username
   };
 
+  // Save userId to localStorage for persistence
+  localStorage.setItem('userId', message.userId);
+  localStorage.setItem('username', username);
+
   // Add current user to userMap
   userMap.set(currentUser.id, currentUser.name);
 
   changeUsernameBtn.textContent = `${currentUser.name}`;
-  
+
   // Hide connection screen and show main app
   connectionScreen.classList.add('hidden');
   mainApp.classList.remove('hidden');
-  
+
   userSetup.classList.add('hidden');
   userList.classList.remove('hidden');
 
   // Enable controls for user selection (still disabled for messaging)
   enableMessageControlsForSelection();
-  
+
   updateConnectionStatus('Registration Successful!', `Welcome, ${currentUser.name}!`);
 }
 

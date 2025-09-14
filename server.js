@@ -172,27 +172,44 @@ function handleMessage(ws, message, clientId) {
 
 // Handle user registration
 function handleUserRegistration(ws, data, clientId) {
-  console.log(`Registration attempt from ${clientId}: username '${data.username}'`);
+  console.log(`Registration attempt from ${clientId}: username '${data.username}', userId: ${data.userId || 'new'}`);
 
-  // Check for duplicate username
-  for (const [existingUserId, session] of userSessions) {
-    if (session.username === data.username) {
-      // Username already exists, reject registration
-      const errorResponse = {
-        type: 'registration_error',
-        error: 'Username already in use. Please choose a different username.'
-      };
-      ws.send(JSON.stringify(errorResponse));
-      console.log(`Registration rejected: Username '${data.username}' already exists (existing user: ${existingUserId})`);
-      return;
+  let userId;
+  let isReconnect = false;
+
+  if (data.userId && userSessions.has(data.userId)) {
+    // Existing user reconnecting
+    const existingSession = userSessions.get(data.userId);
+    if (existingSession.username !== data.username) {
+      // Username changed, update it
+      existingSession.username = data.username;
     }
+    userId = data.userId;
+    isReconnect = true;
+    console.log(`User reconnecting: ${data.username} (${userId})`);
+  } else {
+    // Check for duplicate username only for new users
+    for (const [existingUserId, session] of userSessions) {
+      if (session.username === data.username && existingUserId !== data.userId) {
+        // Username already exists, reject registration
+        const errorResponse = {
+          type: 'registration_error',
+          error: 'Username already in use. Please choose a different username.'
+        };
+        ws.send(JSON.stringify(errorResponse));
+        console.log(`Registration rejected: Username '${data.username}' already exists (existing user: ${existingUserId})`);
+        return;
+      }
+    }
+
+    // New user
+    userId = data.userId || crypto.lib.WordArray.random(16).toString();
   }
 
-  const userId = crypto.lib.WordArray.random(16).toString();
   ws.userId = userId;
   ws.username = data.username;
 
-  // Store user session
+  // Store or update user session
   userSessions.set(userId, {
     clientId: clientId,
     username: data.username,
@@ -206,7 +223,7 @@ function handleUserRegistration(ws, data, clientId) {
 
   ws.send(JSON.stringify(response));
   broadcastUserList();
-  console.log(`User registered: ${data.username} (${userId})`);
+  console.log(`${isReconnect ? 'User reconnected' : 'User registered'}: ${data.username} (${userId})`);
 }
 
 // Handle chat messages
