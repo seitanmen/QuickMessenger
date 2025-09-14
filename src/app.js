@@ -311,7 +311,6 @@ async function init() {
   loadTheme();
   loadLanguage();
   setupEventListeners();
-  showLockScreen();
   loadMessageHistory();
 
   console.log('Setting initial screen visibility...');
@@ -320,18 +319,11 @@ async function init() {
   connectionScreen.classList.add('hidden');
   mainApp.classList.add('hidden');
 
-  // Check if password is set and app is locked
+  // Check if password is set
   const hasPassword = await ipcRenderer.invoke('has-password');
   if (hasPassword) {
-    const locked = await ipcRenderer.invoke('is-locked');
-    if (locked) {
-      showLockScreen();
-    } else {
-      // Disable all message-related controls from the start
-      disableMessageControls('connectingToServerMsg');
-      console.log('Starting connection screen...');
-      showConnectionScreen();
-    }
+    // Always show lock screen if password is set
+    showLockScreen();
   } else {
     // No password set, show password setup
     showPasswordSetup();
