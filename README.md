@@ -1,6 +1,8 @@
-# QuickMessenger - Client-Server Architecture
+# QuickMessenger
 
-This application has been converted from a P2P architecture to a client-server architecture. The server handles user matching and message recording, while clients connect to the server for messaging.
+[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
+
+QuickMessenger is a secure, real-time messaging and file-sharing application built with Electron, WebSocket, and end-to-end encryption. Designed for local network communication, it ensures privacy through RSA key exchange and AES encryption.
 
 ## Architecture
 
@@ -111,6 +113,41 @@ The provided `nginx.conf`:
 - Includes security headers
 - Can be extended for HTTPS
 
+## Security Overview
+
+### RSA Encryption Usage
+RSA (Rivest-Shamir-Adleman) is an asymmetric cryptographic algorithm used for secure key exchange:
+
+1. **Server Key Generation**: On startup, the server generates an RSA key pair (public/private).
+2. **Public Key Sharing**: The server's public key is sent to connecting clients.
+3. **Session Key Exchange**:
+   - Client generates a random AES session key.
+   - Encrypts the session key with the server's public key and sends it.
+   - Server decrypts using its private key to obtain the session key.
+4. **Message Encryption**: All subsequent messages are encrypted with the AES session key.
+
+This prevents eavesdropping on the session key during transmission, ensuring end-to-end security.
+
+### Token and Password Handling
+The authentication system follows these steps:
+
+1. **Initial Registration**:
+   - User enters username and password.
+   - Password is RSA-encrypted with the server's public key and sent.
+   - Server decrypts password, generates a user ID.
+   - User ID is AES-encrypted with the password, signed into a JWT token.
+   - Token is returned to the client.
+
+2. **Reconnection**:
+   - Stored token is sent to the server.
+   - Server verifies the token and decrypts the user ID.
+   - Password match is confirmed for authentication.
+
+3. **Security Measures**:
+   - Passwords are not stored in localStorage; only tokens are kept.
+   - Tokens expire in 24 hours.
+   - Secrets (JWT_SECRET, AES_SECRET_KEY) are managed via environment variables.
+
 ## Security Notes
 
 - **End-to-End Encryption**: RSA key exchange establishes secure AES session keys for all communications
@@ -139,3 +176,25 @@ The provided `nginx.conf`:
 - Check nginx configuration syntax
 - Verify proxy settings
 - Check firewall allows port 80/443
+
+## Contributing
+
+1. Fork the repository.
+2. Create a feature branch: `git checkout -b feature/your-feature`.
+3. Commit changes: `git commit -am 'Add your feature'`.
+4. Push to the branch: `git push origin feature/your-feature`.
+5. Submit a pull request.
+
+Please focus on security improvements and follow the existing code style.
+
+## Screenshots
+
+(Add screenshots here if available)
+
+## License
+
+This project is licensed under the GNU General Public License v3.0 - see the [LICENSE](LICENSE) file for details.
+
+## Support
+
+For issues or questions, please open an issue on GitHub.
