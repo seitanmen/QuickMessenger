@@ -422,8 +422,8 @@ function showPasswordSetup() {
   const setupContainer = document.createElement('div');
   setupContainer.id = 'password-setup-container';
   setupContainer.innerHTML = `
-    <input type="password" id="setup-password" placeholder="${lang.enterPasswordPlaceholder}" style="width: 100%; padding: 10px; margin: 10px 0; border: 1px solid #ddd; border-radius: 4px;">
-    <input type="password" id="confirm-password" placeholder="${lang.confirmPasswordPlaceholder}" style="width: 100%; padding: 10px; margin: 10px 0; border: 1px solid #ddd; border-radius: 4px;">
+    <input type="password" id="setup-password" placeholder="${lang.enterPasswordPlaceholder}" >
+    <input type="password" id="confirm-password" placeholder="${lang.confirmPasswordPlaceholder}" >
     <div id="setup-error" style="color: #ff4444; margin: 10px 0;"></div>
     <button id="set-password-btn" style="width: 100%; padding: 10px; background: #2196f3; color: white; border: none; border-radius: 4px; cursor: pointer;">${lang.setPasswordBtn}</button>
   `;
