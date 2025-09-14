@@ -1499,10 +1499,7 @@ function renderFileMessageElement(data) {
     messageElement.appendChild(header);
     messageElement.appendChild(video);
 
-    const saveBtn = document.createElement('button');
-    saveBtn.textContent = languages[currentLanguage].saveVideo;
-    saveBtn.addEventListener('click', () => saveFile(data.filename, data.fileData));
-    messageElement.appendChild(saveBtn);
+
   } else {
     // Regular file
     const fileLink = document.createElement('a');
