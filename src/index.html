@@ -9,6 +9,20 @@
 <body>
 
 
+    <!-- Password Lock Screen -->
+    <div id="lock-screen" class="lock-screen">
+        <div class="lock-container">
+            <div class="lock-icon">
+                <img src="../icon/lock-icon.svg" alt="Lock" class="lock-svg">
+            </div>
+            <h2 id="lock-title">Enter Password</h2>
+            <input type="password" id="password-input" placeholder="Enter password">
+            <div id="lock-error" class="lock-error"></div>
+            <button id="unlock-btn">Unlock</button>
+            <button id="reset-btn" class="reset-btn">Reset App</button>
+        </div>
+    </div>
+
     <!-- Connection Status Screen -->
     <div id="connection-screen" class="connection-screen">
         <div class="connection-container">
@@ -25,8 +39,7 @@
         <header class="app-header">
              <div class="header-left">
                   <h1>QuickMessenger</h1>
-                 <span id="username-display"></span>
-                 <button id="change-username-btn" class="change-username-btn">Change Username</button>
+                 <button id="change-username-btn" class="change-username-btn">Username</button>
              </div>
              <div class="header-right">
                  <select id="language-select" class="language-select">

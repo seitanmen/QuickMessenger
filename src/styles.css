@@ -13,6 +13,7 @@
   --button-bg: #2196f3;
   --button-hover: #1976d2;
   --icon-color: #ffffff;
+  --chooseuser-bg: #dddddd;
 }
 
 [data-theme="dark"] {
@@ -29,6 +30,40 @@
   --button-bg: #4caf50;
   --button-hover: #45a049;
   --icon-color: #000000;
+  --chooseuser-bg: #222222;
+}
+
+@keyframes l20 {
+  9.09% {text-shadow: 
+        calc( 0*var(--w)) -10px var(--text-color),calc(-1*var(--w)) 0 var(--text-color),calc(-2*var(--w)) 0 var(--text-color),calc(-3*var(--w)) 0 var(--text-color),calc(-4*var(--w)) 0 var(--text-color), 
+        calc(-5*var(--w)) 0 var(--text-color),calc(-6*var(--w)) 0 var(--text-color),calc(-7*var(--w)) 0 var(--text-color),calc(-8*var(--w)) 0 var(--text-color),calc(-9*var(--w)) 0 var(--text-color)}
+  18.18% {text-shadow: 
+        calc( 0*var(--w)) 0 var(--text-color),calc(-1*var(--w)) -10px var(--text-color),calc(-2*var(--w)) 0 var(--text-color),calc(-3*var(--w)) 0 var(--text-color),calc(-4*var(--w)) 0 var(--text-color), 
+        calc(-5*var(--w)) 0 var(--text-color),calc(-6*var(--w)) 0 var(--text-color),calc(-7*var(--w)) 0 var(--text-color),calc(-8*var(--w)) 0 var(--text-color),calc(-9*var(--w)) 0 var(--text-color)}
+  27.27% {text-shadow: 
+        calc( 0*var(--w)) 0 var(--text-color),calc(-1*var(--w)) 0 var(--text-color),calc(-2*var(--w)) -10px var(--text-color),calc(-3*var(--w)) 0 var(--text-color),calc(-4*var(--w)) 0 var(--text-color), 
+        calc(-5*var(--w)) 0 var(--text-color),calc(-6*var(--w)) 0 var(--text-color),calc(-7*var(--w)) 0 var(--text-color),calc(-8*var(--w)) 0 var(--text-color),calc(-9*var(--w)) 0 var(--text-color)}
+  36.36% {text-shadow: 
+        calc( 0*var(--w)) 0 var(--text-color),calc(-1*var(--w)) 0 var(--text-color),calc(-2*var(--w)) 0 var(--text-color),calc(-3*var(--w)) -10px var(--text-color),calc(-4*var(--w)) 0 var(--text-color), 
+        calc(-5*var(--w)) 0 var(--text-color),calc(-6*var(--w)) 0 var(--text-color),calc(-7*var(--w)) 0 var(--text-color),calc(-8*var(--w)) 0 var(--text-color),calc(-9*var(--w)) 0 var(--text-color)}
+  45.45% {text-shadow: 
+        calc( 0*var(--w)) 0 var(--text-color),calc(-1*var(--w)) 0 var(--text-color),calc(-2*var(--w)) 0 var(--text-color),calc(-3*var(--w)) 0 var(--text-color),calc(-4*var(--w)) -10px var(--text-color), 
+        calc(-5*var(--w)) 0 var(--text-color),calc(-6*var(--w)) 0 var(--text-color),calc(-7*var(--w)) 0 var(--text-color),calc(-8*var(--w)) 0 var(--text-color),calc(-9*var(--w)) 0 var(--text-color)}
+  54.54% {text-shadow: 
+        calc( 0*var(--w)) 0 var(--text-color),calc(-1*var(--w)) 0 var(--text-color),calc(-2*var(--w)) 0 var(--text-color),calc(-3*var(--w)) 0 var(--text-color),calc(-4*var(--w)) 0 var(--text-color), 
+        calc(-5*var(--w)) -10px var(--text-color),calc(-6*var(--w)) 0 var(--text-color),calc(-7*var(--w)) 0 var(--text-color),calc(-8*var(--w)) 0 var(--text-color),calc(-9*var(--w)) 0 var(--text-color)}
+  63.63% {text-shadow: 
+        calc( 0*var(--w)) 0 var(--text-color),calc(-1*var(--w)) 0 var(--text-color),calc(-2*var(--w)) 0 var(--text-color),calc(-3*var(--w)) 0 var(--text-color),calc(-4*var(--w)) 0 var(--text-color), 
+        calc(-5*var(--w)) 0 var(--text-color),calc(-6*var(--w)) -10px var(--text-color),calc(-7*var(--w)) 0 var(--text-color),calc(-8*var(--w)) 0 var(--text-color),calc(-9*var(--w)) 0 var(--text-color)}
+  72.72% {text-shadow: 
+        calc( 0*var(--w)) 0 var(--text-color),calc(-1*var(--w)) 0 var(--text-color),calc(-2*var(--w)) 0 var(--text-color),calc(-3*var(--w)) 0 var(--text-color),calc(-4*var(--w)) 0 var(--text-color), 
+        calc(-5*var(--w)) 0 var(--text-color),calc(-6*var(--w)) 0 var(--text-color),calc(-7*var(--w)) -10px var(--text-color),calc(-8*var(--w)) 0 var(--text-color),calc(-9*var(--w)) 0 var(--text-color)}
+  81.81% {text-shadow: 
+        calc( 0*var(--w)) 0 var(--text-color),calc(-1*var(--w)) 0 var(--text-color),calc(-2*var(--w)) 0 var(--text-color),calc(-3*var(--w)) 0 var(--text-color),calc(-4*var(--w)) 0 var(--text-color), 
+        calc(-5*var(--w)) 0 var(--text-color),calc(-6*var(--w)) 0 var(--text-color),calc(-7*var(--w)) 0 var(--text-color),calc(-8*var(--w)) -10px var(--text-color),calc(-9*var(--w)) 0 var(--text-color)}
+  90.90% {text-shadow: 
+        calc( 0*var(--w)) 0 var(--text-color),calc(-1*var(--w)) 0 var(--text-color),calc(-2*var(--w)) 0 var(--text-color),calc(-3*var(--w)) 0 var(--text-color),calc(-4*var(--w)) 0 var(--text-color), 
+        calc(-5*var(--w)) 0 var(--text-color),calc(-6*var(--w)) 0 var(--text-color),calc(-7*var(--w)) 0 var(--text-color),calc(-8*var(--w)) 0 var(--text-color),calc(-9*var(--w)) -10px var(--text-color)}
 }
 
 /* Global styles */
@@ -44,6 +79,103 @@ body {
   color: var(--text-color);
   height: 100vh;
   overflow: hidden;
+}
+
+/* Lock screen styles */
+.lock-screen {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: var(--bg-color);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 4000;
+}
+
+.lock-container {
+  text-align: center;
+  padding: 40px;
+  border-radius: 12px;
+  background-color: var(--sidebar-bg);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  max-width: 400px;
+  min-width: 320px;
+  width: 90%;
+}
+
+.lock-icon {
+  margin-bottom: 20px;
+}
+
+.lock-svg {
+  width: 64px;
+  height: 64px;
+  opacity: 0.7;
+}
+
+.lock-container h2 {
+  color: var(--text-color);
+  margin-bottom: 20px;
+  font-size: 24px;
+}
+
+#password-input {
+  width: 100%;
+  padding: 12px;
+  margin-bottom: 10px;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  background-color: var(--input-bg);
+  color: var(--text-color);
+  font-size: 16px;
+}
+
+#password-input:focus {
+  outline: none;
+  border-color: var(--button-bg);
+}
+
+.lock-error {
+  color: #ff4444;
+  margin-bottom: 10px;
+  min-height: 20px;
+  font-size: 14px;
+}
+
+#unlock-btn {
+  width: 100%;
+  padding: 12px;
+  background-color: var(--button-bg);
+  color: var(--header-text);
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 16px;
+  margin-bottom: 10px;
+  transition: background-color 0.3s;
+}
+
+#unlock-btn:hover {
+  background-color: var(--button-hover);
+}
+
+.reset-btn {
+  background: none;
+  border: 1px solid #ff4444;
+  color: #ff4444;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background-color 0.3s;
+}
+
+.reset-btn:hover {
+  background-color: #ff4444;
+  color: white;
 }
 
 /* Connection screen styles */
@@ -67,22 +199,25 @@ body {
   background-color: var(--sidebar-bg);
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
   max-width: 400px;
+  min-width: 320px;
   width: 90%;
 }
 
 .connection-spinner {
   width: 50px;
-  height: 50px;
-  border: 4px solid var(--border-color);
-  border-top: 4px solid var(--button-bg);
+  margin: auto;
+  margin-bottom: 10px;
+  aspect-ratio: 1;
   border-radius: 50%;
-  animation: spin 1s linear infinite;
-  margin: 0 auto 20px;
+  background: 
+    radial-gradient(farthest-side,#ffa516 94%,#0000) top/8px 8px no-repeat,
+    conic-gradient(#0000 30%,#ffa516);
+  -webkit-mask: radial-gradient(farthest-side,#0000 calc(100% - 8px),#000 0);
+  animation: l13 1s infinite linear;
 }
 
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+@keyframes l13{ 
+  100%{transform: rotate(1turn)}
 }
 
 .connection-container h2 {
@@ -167,6 +302,8 @@ body {
 
 .theme-btn, .screenshot-btn, .debug-btn {
   background: none;
+  max-width: 30px;
+  max-height: 30px;
   border: none;
   cursor: pointer;
   padding: 5px;
@@ -187,6 +324,7 @@ body {
 
 .sidebar {
   width: 300px;
+  min-width: 200px;
   background-color: var(--sidebar-bg);
   padding: 20px;
   border-right: 1px solid var(--border-color);
@@ -196,6 +334,9 @@ body {
 
 .user-setup, .user-list {
   margin-bottom: 20px;
+  background:var(--chooseuser-bg);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.22);
+  padding: 10px 10px;
 }
 
 .user-setup h3, .user-list h3 {
@@ -280,6 +421,7 @@ body {
 /* Chat area styles */
 .chat-area {
   flex: 1;
+  min-width: 500px;
   display: flex;
   flex-direction: column;
   background-color: var(--bg-color);
@@ -358,7 +500,7 @@ body {
 
 #message-input {
   flex: 1;
-  padding: 10px;
+  padding: 14px;
   border: 1px solid var(--border-color);
   border-radius: 4px;
   background-color: var(--input-bg);

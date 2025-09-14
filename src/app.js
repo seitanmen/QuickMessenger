@@ -11,6 +11,7 @@ let pingInterval;
 let currentLanguage = 'en';
 let userMap = new Map(); // Map to store userId -> username
 let messageHistory = new Map(); // Map to store messages by conversation
+let isLocked = false;
 
 // Language data
 const languages = {
@@ -70,13 +71,26 @@ const languages = {
     at: 'at',
     retryingWith: 'Retrying with localhost...',
     showingManualSetup: 'Showing manual username setup...',
-    // General connection messages
-    errorConnectingTo: 'Error connecting to'
-  },
+     // General connection messages
+     errorConnectingTo: 'Error connecting to',
+     // Password lock messages
+     enterPassword: 'Enter Password',
+     setPassword: 'Set Password',
+     passwordSetupDesc: 'Please set a password to secure your app.',
+     enterPasswordPlaceholder: 'Please enter your password.',
+     confirmPasswordPlaceholder: 'Confirm password',
+     setPasswordBtn: 'Set Password',
+     unlockBtn: 'Unlock',
+     resetBtn: 'Reset App',
+     passwordMismatch: 'Passwords do not match.',
+     passwordTooShort: 'Password must be at least 4 characters.',
+     incorrectPassword: 'Incorrect password.',
+     resetConfirm: 'Are you sure you want to reset the app? This will clear all data.'
+   },
   ja: {
     appTitle: 'QuickMessenger',
     cancelBtn: 'キャンセル',
-    chooseUsername: 'ユーザ名を選択',
+    chooseUsername: 'ユーザ名を設定',
     enterUsername: 'ユーザ名を入力',
     registerBtn: '登録',
     onlineUsers: 'オンラインユーザー',
@@ -129,13 +143,26 @@ const languages = {
     at: 'アドレス',
     retryingWith: 'localhostで再試行中...',
     showingManualSetup: '手動ユーザー名設定を表示中...',
-    // General connection messages
-    errorConnectingTo: '接続エラー'
-  },
+     // General connection messages
+     errorConnectingTo: '接続エラー',
+     // Password lock messages
+     enterPassword: 'パスワードを入力',
+     setPassword: 'パスワードを設定',
+     passwordSetupDesc: 'アプリを保護するためにパスワードを設定してください。',
+     enterPasswordPlaceholder: 'パスワードを入力して下さい。',
+     confirmPasswordPlaceholder: 'パスワードを入力(確認)',
+     setPasswordBtn: 'パスワードを設定',
+     unlockBtn: '解除',
+     resetBtn: 'アプリをリセット',
+     passwordMismatch: 'パスワードが一致しません。',
+     passwordTooShort: 'パスワードは4文字以上で入力してください。',
+     incorrectPassword: 'パスワードが正しくありません。',
+     resetConfirm: 'アプリをリセットしますか？すべてのデータが削除されます。'
+   },
   zh: {
     appTitle: 'QuickMessenger',
     cancelBtn: '取消',
-    chooseUsername: '选择用户名',
+    chooseUsername: '设置用户名',
     enterUsername: '输入用户名',
     registerBtn: '注册',
     onlineUsers: '在线用户',
@@ -188,12 +215,30 @@ const languages = {
     at: '地址',
     retryingWith: '用localhost重试...',
     showingManualSetup: '显示手动用户名设置...',
-    // General connection messages
-    errorConnectingTo: '连接错误到'
-  }
-};
+     // General connection messages
+     errorConnectingTo: '连接错误到',
+     // Password lock messages
+     enterPassword: '输入密码',
+     setPassword: '设置密码',
+     passwordSetupDesc: '请设置密码以保护您的应用。',
+     enterPasswordPlaceholder: '请输入密码',
+     confirmPasswordPlaceholder: '输入密码（确认）',
+     setPasswordBtn: '设置密码',
+     unlockBtn: '解锁',
+     resetBtn: '重置应用',
+     passwordMismatch: '密码不匹配。',
+     passwordTooShort: '密码必须至少4个字符。',
+     incorrectPassword: '密码错误。',
+     resetConfirm: '确定要重置应用吗？这将清除所有数据。'
+   }
+ };
 
 // DOM elements
+const lockScreen = document.getElementById('lock-screen');
+const passwordInput = document.getElementById('password-input');
+const unlockBtn = document.getElementById('unlock-btn');
+const resetBtn = document.getElementById('reset-btn');
+const lockError = document.getElementById('lock-error');
 const connectionScreen = document.getElementById('connection-screen');
 const connectionTitle = document.getElementById('connection-title');
 const connectionStatus = document.getElementById('connection-status');
@@ -215,7 +260,6 @@ const themeIcon = document.getElementById('theme-icon');
 const screenshotBtn = document.getElementById('screenshot-btn');
 const debugBtn = document.getElementById('debug-btn');
 
- const usernameDisplay = document.getElementById('username-display');
  const languageSelect = document.getElementById('language-select');
   const changeUsernameBtn = document.getElementById('change-username-btn');
   const usernameModal = document.getElementById('username-modal');
@@ -245,6 +289,12 @@ function updateTexts() {
   // Update connection screen texts
   document.getElementById('connection-title').textContent = lang.connectingToServer;
   document.getElementById('connection-status').textContent = lang.searchingServers;
+
+  // Update lock screen texts
+  document.getElementById('lock-title').textContent = lang.enterPassword;
+  document.getElementById('password-input').placeholder = lang.enterPasswordPlaceholder;
+  document.getElementById('unlock-btn').textContent = lang.unlockBtn;
+  document.getElementById('reset-btn').textContent = lang.resetBtn;
 }
 
 // Load saved language
@@ -256,23 +306,36 @@ function loadLanguage() {
 }
 
 // Initialize app
-function init() {
+async function init() {
   console.log('=== INITIALIZING APP ===');
   loadTheme();
   loadLanguage();
   setupEventListeners();
+  showLockScreen();
   loadMessageHistory();
-  
+
   console.log('Setting initial screen visibility...');
-  // Initially hide all screens except connection screen
+  // Initially hide all screens
+  lockScreen.classList.add('hidden');
   connectionScreen.classList.add('hidden');
   mainApp.classList.add('hidden');
-  
-  // Disable all message-related controls from the start
-  disableMessageControls('connectingToServerMsg');
-  
-  console.log('Starting connection screen...');
-  showConnectionScreen();
+
+  // Check if password is set and app is locked
+  const hasPassword = await ipcRenderer.invoke('has-password');
+  if (hasPassword) {
+    const locked = await ipcRenderer.invoke('is-locked');
+    if (locked) {
+      showLockScreen();
+    } else {
+      // Disable all message-related controls from the start
+      disableMessageControls('connectingToServerMsg');
+      console.log('Starting connection screen...');
+      showConnectionScreen();
+    }
+  } else {
+    // No password set, show password setup
+    showPasswordSetup();
+  }
 }
 
 // Disable message controls with custom placeholder
@@ -303,6 +366,120 @@ function enableMessageControlsForMessaging(username) {
   sendBtn.disabled = false;
   fileBtn.disabled = false;
   messageInput.placeholder = `${lang.messageUser} ${username}...`;
+}
+
+// Show lock screen
+function showLockScreen() {
+  console.log('=== SHOWING LOCK SCREEN ===');
+  lockScreen.classList.remove('hidden');
+  lockError.classList.add('hidden')
+  connectionScreen.classList.add('hidden');
+  mainApp.classList.add('hidden');
+  passwordInput.focus();
+}
+
+// Show password setup screen (reuse connection screen for setup)
+function showPasswordSetup() {
+  console.log('=== SHOWING PASSWORD SETUP ===');
+  connectionScreen.classList.remove('hidden');
+  mainApp.classList.add('hidden');
+  lockScreen.classList.add('hidden');
+
+  const lang = languages[currentLanguage];
+
+  // Modify connection screen for password setup
+  connectionTitle.textContent = lang.setPassword;
+  connectionStatus.textContent = lang.passwordSetupDesc;
+  connectionProgress.textContent = '';
+
+  // Hide spinner and show password input
+  document.querySelector('.connection-spinner').style.display = 'none';
+  const setupContainer = document.createElement('div');
+  setupContainer.id = 'password-setup-container';
+  setupContainer.innerHTML = `
+    <input type="password" id="setup-password" placeholder="${lang.enterPasswordPlaceholder}" style="width: 100%; padding: 10px; margin: 10px 0; border: 1px solid #ddd; border-radius: 4px;">
+    <input type="password" id="confirm-password" placeholder="${lang.confirmPasswordPlaceholder}" style="width: 100%; padding: 10px; margin: 10px 0; border: 1px solid #ddd; border-radius: 4px;">
+    <div id="setup-error" style="color: #ff4444; margin: 10px 0;"></div>
+    <button id="set-password-btn" style="width: 100%; padding: 10px; background: #2196f3; color: white; border: none; border-radius: 4px; cursor: pointer;">${lang.setPasswordBtn}</button>
+  `;
+  connectionScreen.querySelector('.connection-container').appendChild(setupContainer);
+
+  document.getElementById('set-password-btn').addEventListener('click', setPassword);
+  document.getElementById('setup-password').addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') setPassword();
+  });
+  document.getElementById('confirm-password').addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') setPassword();
+  });
+}
+
+// Set password
+async function setPassword() {
+  const password = document.getElementById('setup-password').value;
+  const confirm = document.getElementById('confirm-password').value;
+  const errorDiv = document.getElementById('setup-error');
+  const lang = languages[currentLanguage];
+
+  if (!password) {
+    errorDiv.textContent = lang.enterPasswordPlaceholder;
+    return;
+  }
+
+  if (password !== confirm) {
+    errorDiv.textContent = lang.passwordMismatch;
+    return;
+  }
+
+  if (password.length < 4) {
+    errorDiv.textContent = lang.passwordTooShort;
+    return;
+  }
+
+  try {
+    await ipcRenderer.invoke('set-password', password);
+    // Remove setup container and show connection screen
+    const setupContainer = document.getElementById('password-setup-container');
+    if (setupContainer) setupContainer.remove();
+    document.querySelector('.connection-spinner').style.display = 'block';
+    disableMessageControls('connectingToServerMsg');
+    showConnectionScreen();
+  } catch (error) {
+    errorDiv.textContent = 'Error setting password.';
+  }
+}
+
+// Unlock app
+async function unlockApp() {
+  const password = passwordInput.value;
+  const lang = languages[currentLanguage];
+  if (!password) {
+    lockError.classList.remove('hidden')
+    lockError.textContent = lang.enterPasswordPlaceholder;
+    return;
+  }
+
+  const isValid = await ipcRenderer.invoke('verify-password', password);
+  if (isValid) {
+    await ipcRenderer.invoke('unlock-app');
+    lockScreen.classList.add('hidden');
+    disableMessageControls('connectingToServerMsg');
+    showConnectionScreen();
+  } else {
+    lockError.classList.remove('hidden')
+    lockError.textContent = lang.incorrectPassword;
+    passwordInput.value = '';
+    passwordInput.focus();
+  }
+}
+
+// Reset app
+async function resetApp() {
+  const lang = languages[currentLanguage];
+  if (confirm(lang.resetConfirm)) {
+    await ipcRenderer.invoke('reset-app');
+    // Reload the app
+    location.reload();
+  }
 }
 
 // Show connection screen
@@ -364,6 +541,12 @@ function updateConnectionStatus(titleKey, statusKey, progress = '') {
 // Setup event listeners
 function setupEventListeners() {
 
+  // Lock screen events
+  unlockBtn.addEventListener('click', unlockApp);
+  passwordInput.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') unlockApp();
+  });
+  resetBtn.addEventListener('click', resetApp);
 
   registerBtn.addEventListener('click', registerUser);
   usernameInput.addEventListener('keypress', (e) => {
@@ -684,7 +867,7 @@ function handleRegistrationSuccess(message) {
   // Add current user to userMap
   userMap.set(currentUser.id, currentUser.name);
 
-  usernameDisplay.textContent = `(${currentUser.name})`;
+  changeUsernameBtn.textContent = `${currentUser.name}`;
   
   // Hide connection screen and show main app
   connectionScreen.classList.add('hidden');
@@ -1230,7 +1413,7 @@ function handleUsernameChanged(data) {
   if (data.userId === currentUser.id) {
     // Update own username
     currentUser.name = data.newUsername;
-    usernameDisplay.textContent = `(${currentUser.name})`;
+    changeUsernameBtn.textContent = `${currentUser.name}`;
   }
   // User list will be updated via user_list message
 }

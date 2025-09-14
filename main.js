@@ -2,6 +2,7 @@ const { app, BrowserWindow, ipcMain, dialog } = require('electron');
 const path = require('path');
 const Store = require('electron-store');
 const fs = require('fs');
+const bcrypt = require('bcrypt');
 
 const store = new Store();
 let mainWindow;
@@ -21,8 +22,11 @@ process.on('unhandledRejection', (reason, promise) => {
 // Create main window
 function createWindow() {
   mainWindow = new BrowserWindow({
-    width: 1200,
+    width: 700,
     height: 800,
+    minWidth: 700,
+    minHeight: 300,
+    useContentSize: true,
     webPreferences: {
       nodeIntegration: true,
       contextIsolation: false,
@@ -79,6 +83,44 @@ ipcMain.handle('open-dev-tools', () => {
   if (mainWindow) {
     mainWindow.webContents.openDevTools();
   }
+});
+
+// Password lock functionality
+ipcMain.handle('set-password', (event, password) => {
+  const hashedPassword = bcrypt.hashSync(password, 10);
+  store.set('passwordHash', hashedPassword);
+  store.set('isLocked', true);
+  return true;
+});
+
+ipcMain.handle('verify-password', (event, password) => {
+  const hashedPassword = store.get('passwordHash');
+  if (!hashedPassword) return false;
+  return bcrypt.compareSync(password, hashedPassword);
+});
+
+ipcMain.handle('has-password', () => {
+  return !!store.get('passwordHash');
+});
+
+ipcMain.handle('unlock-app', () => {
+  store.set('isLocked', false);
+});
+
+ipcMain.handle('is-locked', () => {
+  return store.get('isLocked', false);
+});
+
+ipcMain.handle('reset-app', () => {
+  // Clear all stored data
+  store.clear();
+  // Clear message history file
+  const messageHistoryPath = path.join(__dirname, 'message_history.json');
+  if (fs.existsSync(messageHistoryPath)) {
+    fs.unlinkSync(messageHistoryPath);
+  }
+  // Clear any other app data if needed
+  return true;
 });
 
 // App event handlers
