@@ -276,6 +276,7 @@ body {
 
 .change-username-btn {
   background: none;
+  height: 30px;
   border: 1px solid var(--header-text);
   color: var(--header-text);
   padding: 5px 10px;
@@ -297,6 +298,7 @@ body {
 
 .language-select {
   background-color: var(--header-bg);
+  height: 30px;
   color: var(--header-text);
   border: 1px solid var(--header-text);
   padding: 5px;
@@ -440,7 +442,8 @@ body {
   margin-bottom: 10px;
   padding: 10px;
   border-radius: 8px;
-  max-width: 70%;
+  max-width: 80%;
+  width: fit-content;
 }
 
 .message.own {
@@ -487,12 +490,19 @@ body {
   background-color: var(--bg-color);
   border: 1px solid var(--border-color);
   border-radius: 4px;
-  margin-bottom: 5px;
+  margin-bottom: 20px;
 }
 
 .preview-item img, .preview-item video {
   max-width: 100px;
   max-height: 100px;
+}
+
+button#remove-btn {
+    width: 20px;
+    height: 20px;
+    padding: 1px;
+    margin-left: auto;
 }
 
 .input-container {
@@ -502,8 +512,9 @@ body {
 }
 
 #message-input {
+  height: 40px;
   flex: 1;
-  padding: 14px;
+  padding: 12px;
   border: 1px solid var(--border-color);
   border-radius: 4px;
   background-color: var(--input-bg);
@@ -538,6 +549,8 @@ body {
 }
 
 .file-btn, .send-btn {
+  width: 40px;
+  height: 40px;
   padding: 10px;
   border: none;
   border-radius: 4px;

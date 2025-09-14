@@ -1374,6 +1374,7 @@ function handleDrop(e) {
 
 // Update file preview
 function updateFilePreview() {
+  filePreview.classList.remove('hidden');
   filePreview.innerHTML = '';
 
   if (attachedFiles.length > 0) {
@@ -1398,6 +1399,8 @@ function updateFilePreview() {
       previewItem.appendChild(fileName);
 
       const removeBtn = document.createElement('button');
+      removeBtn.id = 'remove-btn';
+      removeBtn.className = 'remove-btn';
       removeBtn.textContent = '×';
       removeBtn.addEventListener('click', () => {
         attachedFiles.splice(index, 1);
@@ -1408,6 +1411,7 @@ function updateFilePreview() {
       filePreview.appendChild(previewItem);
     });
   } else {
+    filePreview.classList.add('hidden');
     filePreview.classList.remove('show');
   }
 }
