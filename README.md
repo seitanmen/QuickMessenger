@@ -187,7 +187,9 @@ Please focus on security improvements and follow the existing code style.
 
 ## Screenshots
 
-(Add screenshots here if available)
+![screenshot](https://github.com/user-attachments/assets/e707a0e9-ad92-4dce-8846-05c616d1f26a)
+![screenshot](https://github.com/user-attachments/assets/b0aebe09-0caf-4463-85b7-78ac32ef80e0)
+![screenshot](https://github.com/user-attachments/assets/99ed70c2-cd7a-405c-a861-036484bc8fb1)
 
 ## License
 
