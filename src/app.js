@@ -431,6 +431,8 @@ async function setPassword() {
 
   try {
     await ipcRenderer.invoke('set-password', password);
+    // Save password to localStorage
+    localStorage.setItem('password', password);
     // Remove setup container and show connection screen
     const setupContainer = document.getElementById('password-setup-container');
     if (setupContainer) setupContainer.remove();
@@ -454,6 +456,8 @@ async function unlockApp() {
 
   const isValid = await ipcRenderer.invoke('verify-password', password);
   if (isValid) {
+    // Save password to localStorage for future use
+    localStorage.setItem('password', password);
     await ipcRenderer.invoke('unlock-app');
     lockScreen.classList.add('hidden');
     disableMessageControls('connectingToServerMsg');
@@ -470,9 +474,10 @@ async function unlockApp() {
 async function resetApp() {
   const lang = languages[currentLanguage];
   if (confirm(lang.resetConfirm)) {
-    // Clear localStorage to reset userId and username
+    // Clear localStorage to reset userId, username, and token
     localStorage.removeItem('userId');
     localStorage.removeItem('username');
+    localStorage.removeItem('token');
     await ipcRenderer.invoke('reset-app');
     // Reload the app
     location.reload();
@@ -715,14 +720,24 @@ function connectToServer(username, serverIP = 'localhost') {
     console.log(`Server: ${serverIP}:8080`);
     updateConnectionStatus('Connected!', 'Registering username...');
 
-    // Load saved userId if exists
+    // Load saved userId, username, token, and password if exists
     const savedUserId = localStorage.getItem('userId');
     const savedUsername = localStorage.getItem('username') || username;
+    const savedToken = localStorage.getItem('token');
+    const savedPassword = localStorage.getItem('password');
+
+    console.log('Client data from localStorage:');
+    console.log(`userId: ${savedUserId}`);
+    console.log(`username: ${savedUsername}`);
+    console.log(`token: ${savedToken ? 'present' : 'null'}`);
+    console.log(`password: ${savedPassword ? 'present' : 'null'}`);
 
     const registerMessage = {
       type: 'register',
       username: savedUsername,
-      userId: savedUserId // Send saved userId for persistence
+      userId: savedUserId, // Send saved userId for persistence
+      token: savedToken, // Send saved token for authentication
+      password: savedPassword // Send saved password for decryption
     };
     console.log('Sending registration message:', registerMessage);
     ws.send(JSON.stringify(registerMessage));
@@ -868,9 +883,14 @@ function handleRegistrationSuccess(message) {
     name: username
   };
 
-  // Save userId to localStorage for persistence
+  // Save userId, username, token, and password to localStorage for persistence
   localStorage.setItem('userId', message.userId);
   localStorage.setItem('username', username);
+  if (message.token) {
+    localStorage.setItem('token', message.token);
+  }
+  // Note: Password is already saved when entered, but ensure it's stored
+  // Password saving is handled in password setup or login
 
   // Add current user to userMap
   userMap.set(currentUser.id, currentUser.name);

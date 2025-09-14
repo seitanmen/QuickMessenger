@@ -4,6 +4,9 @@ const fs = require('fs');
 const os = require('os');
 const dgram = require('dgram');
 const path = require('path');
+const jwt = require('jsonwebtoken');
+
+const JWT_SECRET = 'your-secret-key'; // In production, use environment variable
 
 let wss;
 let clients = new Map();
@@ -172,7 +175,47 @@ function handleMessage(ws, message, clientId) {
 
 // Handle user registration
 function handleUserRegistration(ws, data, clientId) {
-  console.log(`Registration attempt from ${clientId}: username '${data.username}', userId: ${data.userId || 'new'}`);
+  console.log(`Registration attempt from ${clientId}: username '${data.username}', userId: ${data.userId || 'new'}, token: ${data.token ? 'provided' : 'none'}`);
+  if (data.token) {
+    console.log(`Client token: ${data.token}`);
+  }
+
+  // Validate token if provided
+  if (data.token) {
+    try {
+      const decoded = jwt.verify(data.token, JWT_SECRET);
+      let decryptedUserId;
+
+      if (decoded.encryptedUserId) {
+        // Decrypt encrypted userId
+        decryptedUserId = crypto.AES.decrypt(decoded.encryptedUserId, data.password).toString(crypto.enc.Utf8);
+        console.log(`Token decoded: encrypted userId decrypted to ${decryptedUserId}, issued at ${new Date(decoded.iat * 1000)}, expires at ${new Date(decoded.exp * 1000)}`);
+      } else {
+        throw new Error('Invalid token format: legacy tokens not supported');
+      }
+
+      if (decryptedUserId !== data.userId) {
+        const errorResponse = {
+          type: 'registration_error',
+          error: 'Invalid token for userId.'
+        };
+        ws.send(JSON.stringify(errorResponse));
+        console.log(`Registration rejected: Token mismatch for userId ${data.userId}`);
+        return;
+      }
+    } catch (error) {
+      const errorResponse = {
+        type: 'registration_error',
+        error: 'Invalid or expired token.'
+      };
+      ws.send(JSON.stringify(errorResponse));
+      console.log(`Registration rejected: Invalid token for userId ${data.userId}`);
+      console.log(`Token verification error: ${error.message}`);
+      console.log(`Received token: ${data.token ? 'present' : 'null'}`);
+      console.log(`Received password: ${data.password ? 'present' : 'null'}`);
+      return;
+    }
+  }
 
   let userId;
   let isReconnect = false;
@@ -216,9 +259,16 @@ function handleUserRegistration(ws, data, clientId) {
     connectedAt: new Date().toISOString()
   });
 
+  // Encrypt userId with password
+  const encryptedUserId = crypto.AES.encrypt(userId, data.password).toString();
+
+  // Generate JWT token with encrypted userId
+  const token = jwt.sign({ encryptedUserId }, JWT_SECRET, { expiresIn: '24h' });
+
   const response = {
     type: 'registration_success',
-    userId: userId
+    userId: userId,
+    token: token
   };
 
   ws.send(JSON.stringify(response));
@@ -228,6 +278,7 @@ function handleUserRegistration(ws, data, clientId) {
 
 // Handle chat messages
 function handleChatMessage(data) {
+  console.log(`Chat message from userId ${data.from} to ${data.to}: ${data.content}`);
   const messageData = {
     type: 'message',
     from: data.from,
@@ -250,6 +301,7 @@ function handleChatMessage(data) {
 
 // Handle username change
 function handleUsernameChange(ws, data) {
+  console.log(`Username change request from userId ${ws.userId}: '${ws.username}' -> '${data.newUsername}'`);
   if (ws.username && data.newUsername) {
     // Check for duplicate username (excluding current user)
     for (const [existingUserId, session] of userSessions) {
@@ -310,6 +362,7 @@ function handlePing(ws) {
 
 // Handle file transfers
 function handleFileTransfer(data) {
+  console.log(`File transfer from userId ${data.from} to ${data.to}: ${data.filename} (${(Buffer.from(data.fileData, 'base64').length / 1024 / 1024).toFixed(2)} MB)`);
   // Validate file size (max 5GB)
   const fileSize = Buffer.from(data.fileData, 'base64').length;
   if (fileSize > 5 * 1024 * 1024 * 1024) {
