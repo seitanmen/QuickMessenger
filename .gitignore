@@ -1,0 +1,7 @@
+.env
+users.json
+message_history.json
+audit.log
+node_modules
+cert.pem
+key.pem
