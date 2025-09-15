@@ -12,5 +12,6 @@ fi
 # Build for macOS
 echo "Building macOS application..."
 npm run dist -- --mac
+npm run build-server
 
 echo "Build completed! Check the 'dist' folder for the macOS application."

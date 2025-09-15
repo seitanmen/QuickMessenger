@@ -10,7 +10,10 @@
     "build": "electron-builder",
     "dist": "electron-builder --publish=never",
     "build-server": "pkg server.js",
-    "build-server-all": "pkg server.js --targets node18-win-x64,node18-macos-x64,node18-linux-x64"
+    "build-server-win": "pkg server.js --targets node18-win-x64 --out-path dist/server/win",
+    "build-server-mac": "pkg server.js --targets node18-macos-x64 --out-path dist/server/mac",
+    "build-server-linux": "pkg server.js --targets node18-linux-x64 --out-path dist/server/linux",
+    "build-server-all": "npm run build-server-win && npm run build-server-mac && npm run build-server-linux"
   },
   "author": "QuickMessenger",
   "license": "GPL-3.0 license",
@@ -31,20 +34,16 @@
   },
   "pkg": {
     "scripts": "server.js",
-    "assets": [
-      ".env",
-      "users.json",
-      "message_history.json",
-      "audit.log",
-      "setup_env.sh"
-    ],
-    "outputPath": "dist"
+    "assets": [],
+    "directories": {
+      "output": "dist/server"
+    }
   },
   "build": {
     "appId": "com.quickmessenger.app",
     "productName": "QuickMessenger",
     "directories": {
-      "output": "dist"
+      "output": "dist/client"
     },
     "icon": "icon/icon.png"
   }
