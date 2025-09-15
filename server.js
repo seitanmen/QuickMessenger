@@ -52,6 +52,27 @@ if (!serverPublicKey || !serverPrivateKey) {
   console.log('RSA key pair generated. Please save to environment variables for persistence.');
 } else {
   console.log('RSA key pair loaded from environment variables.');
+  console.log(`RSA Public Key length: ${serverPublicKey.length} characters`);
+  console.log(`RSA Private Key length: ${serverPrivateKey.length} characters`);
+
+  // Validate RSA keys
+  console.log('RSA Public Key (first 100 chars):', serverPublicKey.substring(0, 100));
+  try {
+    const publicKeyObj = cryptoNode.createPublicKey(serverPublicKey);
+    console.log('RSA Public Key validation: SUCCESS');
+  } catch (error) {
+    console.error('RSA Public Key validation: FAILED', error.message);
+    console.error('Full error:', error);
+  }
+
+  console.log('RSA Private Key (first 100 chars):', serverPrivateKey.substring(0, 100));
+  try {
+    const privateKeyObj = cryptoNode.createPrivateKey(serverPrivateKey);
+    console.log('RSA Private Key validation: SUCCESS');
+  } catch (error) {
+    console.error('RSA Private Key validation: FAILED', error.message);
+    console.error('Full error:', error);
+  }
 }
 
 let wss;
@@ -169,8 +190,8 @@ function initNetworkDiscovery() {
 function initWebSocketServer() {
   try {
     const https = require('https');
-    const certPath = path.join(path.dirname(process.execPath), 'cert.pem');
-    const keyPath = path.join(path.dirname(process.execPath), 'key.pem');
+    const certPath = path.join(__dirname, 'cert.pem');
+    const keyPath = path.join(__dirname, 'key.pem');
     const server = https.createServer({
       cert: fs.readFileSync(certPath),
       key: fs.readFileSync(keyPath)

@@ -280,6 +280,7 @@ body {
   border: 1px solid var(--header-text);
   color: var(--header-text);
   padding: 5px 10px;
+  margin-right: 15px;
   border-radius: 4px;
   cursor: pointer;
   font-size: 12px;

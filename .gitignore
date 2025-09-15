@@ -1,7 +1,15 @@
 .env
+.DS_Store
 users.json
 message_history.json
 audit.log
 node_modules
+dist/client
+dist/server
+dist/.DS_Store
+icon/.DS_Store
+src/.DS_Store
+src/client_debug.log
+server_debug.log
 cert.pem
 key.pem
