@@ -12,6 +12,6 @@ if not exist "node_modules" (
 REM Build for Windows
 echo Building Windows application...
 npm run dist -- --win
-npm run build-server
+npm run build-server-win
 
 echo Build completed! Check the 'dist' folder for the Windows application.
