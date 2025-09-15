@@ -30,17 +30,21 @@ DB_ENCRYPTION_KEY=$(openssl rand -hex 32)
 
 echo "4. Generating RSA key pair..."
 # Generate RSA private key
-openssl genrsa -out key.pem 2048 2>/dev/null
+openssl genrsa -traditional -out key.pem 2048 2>/dev/null
 # Extract public key
 RSA_PRIVATE_KEY=$(cat key.pem)
-RSA_PUBLIC_KEY=$(openssl rsa -in key.pem -pubout 2>/dev/null | sed '1d;$d' | tr -d '\n')
+RSA_PUBLIC_KEY=$(openssl rsa -in key.pem -RSAPublicKey_out 2>/dev/null | sed '1d;$d' | tr -d '\n')
 
 echo "5. Generating SSL certificates..."
 # Generate self-signed certificate for HTTPS
 openssl req -x509 -newkey rsa:2048 -keyout key.pem -out cert.pem -days 365 -nodes -subj "/C=US/ST=State/L=City/O=QuickMessenger/CN=localhost" 2>/dev/null
 
 # Format RSA keys for .env file
-RSA_PRIVATE_KEY_FORMATTED="\"-----BEGIN RSA PRIVATE KEY-----\n$(echo "$RSA_PRIVATE_KEY" | sed 's/-----BEGIN RSA PRIVATE KEY-----//' | sed 's/-----END RSA PRIVATE KEY-----//' | fold -w 64 | sed 's/$/\\n/' | tr -d '\n')-----END RSA PRIVATE KEY-----\n\""
+# Extract base64 data from private key (remove headers/footers and clean)
+PRIVATE_KEY_DATA=$(echo "$RSA_PRIVATE_KEY" | sed '1d;$d' | tr -d '\n')
+RSA_PRIVATE_KEY_FORMATTED="\"-----BEGIN RSA PRIVATE KEY-----\n$(echo "$PRIVATE_KEY_DATA" | fold -w 64 | sed 's/$/\\n/' | tr -d '\n')-----END RSA PRIVATE KEY-----\n\""
+
+# Format public key
 RSA_PUBLIC_KEY_FORMATTED="\"-----BEGIN RSA PUBLIC KEY-----\n$(echo "$RSA_PUBLIC_KEY" | fold -w 64 | sed 's/$/\\n/' | tr -d '\n')-----END RSA PUBLIC KEY-----\n\""
 
 # Create .env file
