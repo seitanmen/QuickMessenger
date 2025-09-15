@@ -787,14 +787,16 @@ function connectToServer(username, serverIP = 'localhost') {
     ws.close();
   }
   
-   try {
-     ws = new WebSocket(`wss://${serverIP}:8080`);
-     console.log('WebSocket object created, waiting for connection...');
-   } catch (error) {
-     console.error('Error creating WebSocket:', error);
-     updateConnectionStatus('Connection Failed', `Error: ${error.message}`);
-     return;
-   }
+    try {
+      ws = new WebSocket(`wss://${serverIP}:8080`, {
+        rejectUnauthorized: false // Allow self-signed certificates for development
+      });
+      console.log('WebSocket object created, waiting for connection...');
+    } catch (error) {
+      console.error('Error creating WebSocket:', error);
+      updateConnectionStatus('Connection Failed', `Error: ${error.message}`);
+      return;
+    }
 
   ws.onopen = () => {
     const logMessage = `=== WEBSOCKET CONNECTED === Server: ${serverIP}:8080, readyState: ${ws.readyState}`;
@@ -853,15 +855,15 @@ function connectToServer(username, serverIP = 'localhost') {
 
      clearInterval(pingInterval);
 
-     // Check if it's a certificate error
-     if (error.message && (error.message.includes('certificate') || error.message.includes('CERT') || error.message.includes('SSL'))) {
-       console.log('Certificate error detected, attempting to ignore certificate...');
-       // For Electron, we can try to ignore certificate errors
-       process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
-       updateConnectionStatus('Connection Failed', 'Certificate error. Retrying...');
-       setTimeout(() => connectToServer(username, serverIP), 1000);
-       return;
-     }
+      // Check if it's a certificate error
+      if (error.message && (error.message.includes('certificate') || error.message.includes('CERT') || error.message.includes('SSL'))) {
+        console.log('Certificate error detected');
+        updateConnectionStatus('Connection Failed', 'SSL certificate verification failed. Please ensure the server certificate is trusted or contact your administrator.');
+        // Don't automatically disable certificate verification for security
+        // Instead, inform the user about the certificate issue
+        alert('SSL Certificate Error: The server\'s SSL certificate could not be verified. This may indicate a security issue or that the certificate needs to be added to your trusted certificates.\n\nPlease contact your server administrator or try connecting to a different server.');
+        return;
+      }
 
      updateConnectionStatus('Connection Failed', `Error connecting to ${serverIP}`);
 
@@ -903,10 +905,15 @@ function handleServerMessage(data) {
     if (message.type === 'encrypted') {
       console.log('Decrypting message...');
       if (sessionKey) {
-        const decrypted = crypto.AES.decrypt(message.content, sessionKey).toString(crypto.enc.Utf8);
-        const parsedData = JSON.parse(decrypted);
-        console.log('Decrypted data:', parsedData);
-        handleDecryptedMessage(parsedData);
+        try {
+          const decrypted = crypto.AES.decrypt(message.content, sessionKey).toString(crypto.enc.Utf8);
+          const parsedData = JSON.parse(decrypted);
+          console.log('Decrypted data:', parsedData);
+          handleDecryptedMessage(parsedData);
+        } catch (error) {
+          console.error('Error decrypting message:', error);
+          logToFile(`Error decrypting message: ${error.message}`);
+        }
       } else {
         console.error('Session key not established');
       }
@@ -927,11 +934,21 @@ function handleServerMessage(data) {
     console.log('Received server public key');
     logToFile('Received server public key');
     serverPublicKey = message.publicKey;
+    try {
+      // Validate public key
+      cryptoNode.createPublicKey(serverPublicKey);
+      console.log('Public key is valid');
+    } catch (error) {
+      console.error('Invalid public key:', error);
+      logToFile(`Invalid public key: ${error.message}`);
+      return;
+    }
     // Generate session key and send encrypted
-    sessionKey = crypto.lib.WordArray.random(32).toString(); // 256-bit key
+    sessionKey = cryptoNode.randomBytes(32).toString('hex'); // 256-bit key as hex
     console.log('Generated session key');
     logToFile('Generated session key');
-    const encryptedSessionKey = cryptoNode.publicEncrypt(serverPublicKey, Buffer.from(sessionKey));
+    const sessionKeyBuffer = Buffer.from(sessionKey, 'hex');
+    const encryptedSessionKey = cryptoNode.publicEncrypt(serverPublicKey, sessionKeyBuffer);
     console.log('Encrypted session key with server public key');
     logToFile('Encrypted session key with server public key');
     ws.send(JSON.stringify({

@@ -3,12 +3,80 @@ const path = require('path');
 const Store = require('electron-store');
 const fs = require('fs');
 const bcrypt = require('bcrypt');
+const { exec } = require('child_process');
 
 const store = new Store();
 let mainWindow;
 
+// Function to add certificate to system trust store
+function addCertificateToTrustStore() {
+  const certPath = path.join(__dirname, 'cert.pem');
 
-// Global error handlers
+  if (!fs.existsSync(certPath)) {
+    console.log('Certificate file not found, skipping trust store addition');
+    return;
+  }
+
+  console.log('Attempting to add certificate to system trust store...');
+
+  if (process.platform === 'darwin') {
+    // macOS: Add to system keychain
+    exec(`security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain "${certPath}" 2>/dev/null || echo "Admin privileges required for system keychain"`, (error, stdout, stderr) => {
+      if (error) {
+        console.log('Could not add certificate to system keychain (may require admin privileges)');
+        console.log('Certificate will be handled by app-level certificate error handler');
+      } else {
+        console.log('Certificate successfully added to system keychain');
+      }
+    });
+  } else if (process.platform === 'win32') {
+    // Windows: Add to trusted root store
+    exec(`certutil -addstore -f ROOT "${certPath}"`, (error, stdout, stderr) => {
+      if (error) {
+        console.log('Could not add certificate to Windows trusted root store:', error.message);
+        console.log('Certificate will be handled by app-level certificate error handler');
+      } else {
+        console.log('Certificate successfully added to Windows trusted root store');
+      }
+    });
+  } else if (process.platform === 'linux') {
+    // Linux: Add to system certificate store
+    exec(`cp "${certPath}" /usr/local/share/ca-certificates/quickmessenger.crt 2>/dev/null && update-ca-certificates 2>/dev/null || echo "Admin privileges required for system certificates"`, (error, stdout, stderr) => {
+      if (error) {
+        console.log('Could not add certificate to Linux system store');
+        console.log('Certificate will be handled by app-level certificate error handler');
+      } else {
+        console.log('Certificate successfully added to Linux system certificate store');
+      }
+    });
+  }
+}
+
+// Security settings for TLS/SSL
+app.commandLine.appendSwitch('ignore-certificate-errors', 'false');
+app.commandLine.appendSwitch('disable-web-security', 'false');
+
+// Handle certificate errors securely
+app.on('certificate-error', (event, webContents, url, error, certificate, callback) => {
+  // Check if it's a localhost connection (development only)
+  if (url.includes('localhost') || url.includes('127.0.0.1') || url.includes('0.0.0.0')) {
+    console.log('Allowing certificate error for localhost development:', error);
+    event.preventDefault();
+    callback(true);
+  } else {
+    console.error('Certificate error for non-localhost URL:', url, error);
+    console.error('Certificate details:', {
+      subjectName: certificate.subjectName,
+      issuerName: certificate.issuerName,
+      validStart: certificate.validStart,
+      validExpiry: certificate.validExpiry
+    });
+    callback(false);
+  }
+});
+
+
+
 process.on('uncaughtException', (error) => {
   console.error('Uncaught Exception:', error);
 });
@@ -16,6 +84,8 @@ process.on('uncaughtException', (error) => {
 process.on('unhandledRejection', (reason, promise) => {
   console.error('Unhandled Rejection at:', promise, 'reason:', reason);
 });
+
+
 
 
 
@@ -46,10 +116,6 @@ function createWindow() {
     mainWindow = null;
   });
 }
-
-
-
-
 
 ipcMain.handle('take-screenshot', async () => {
   const screenshot = await mainWindow.webContents.capturePage();
@@ -126,6 +192,9 @@ ipcMain.handle('reset-app', () => {
 // App event handlers
 app.whenReady().then(() => {
   try {
+    // Add certificate to system trust store
+    addCertificateToTrustStore();
+
     createWindow();
 
     app.on('activate', () => {

@@ -169,9 +169,11 @@ function initNetworkDiscovery() {
 function initWebSocketServer() {
   try {
     const https = require('https');
+    const certPath = path.join(path.dirname(process.execPath), 'cert.pem');
+    const keyPath = path.join(path.dirname(process.execPath), 'key.pem');
     const server = https.createServer({
-      cert: fs.readFileSync(path.join(__dirname, 'cert.pem')),
-      key: fs.readFileSync(path.join(__dirname, 'key.pem'))
+      cert: fs.readFileSync(certPath),
+      key: fs.readFileSync(keyPath)
     });
     wss = new WebSocket.Server({ server });
     server.listen(8080, '0.0.0.0', () => {
@@ -268,11 +270,11 @@ function handleMessage(ws, message, clientId) {
           handleUserRegistration(ws, data, clientId);
           break;
         case 'client_public_key':
-          // Store client public key and decrypt session key
-          ws.clientPublicKey = data.publicKey;
-          const encryptedSessionKey = Buffer.from(data.encryptedSessionKey, 'base64');
-          ws.sessionKey = cryptoNode.privateDecrypt(serverPrivateKey, encryptedSessionKey).toString();
-          console.log('Session key established for client:', clientId);
+           // Store client public key and decrypt session key
+           ws.clientPublicKey = data.publicKey;
+           const encryptedSessionKey = Buffer.from(data.encryptedSessionKey, 'base64');
+           ws.sessionKey = cryptoNode.privateDecrypt(serverPrivateKey, encryptedSessionKey).toString('hex');
+           console.log('Session key established for client:', clientId);
           break;
       }
     }

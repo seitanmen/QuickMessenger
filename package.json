@@ -8,13 +8,16 @@
     "server": "node server.js",
     "debug": "electron . --remote-debugging-port=9222",
     "build": "electron-builder",
-    "dist": "electron-builder --publish=never"
+    "dist": "electron-builder --publish=never",
+    "build-server": "pkg server.js",
+    "build-server-all": "pkg server.js --targets node18-win-x64,node18-macos-x64,node18-linux-x64"
   },
   "author": "QuickMessenger",
-  "license": "MIT",
+  "license": "GPL-3.0 license",
   "devDependencies": {
     "electron": "^38.1.0",
-    "electron-builder": "^24.0.0"
+    "electron-builder": "^24.0.0",
+    "pkg": "^5.8.1"
   },
   "dependencies": {
     "bcrypt": "^5.1.1",
@@ -25,6 +28,17 @@
     "speakeasy": "^2.0.0",
     "uuid": "^9.0.0",
     "ws": "^8.13.0"
+  },
+  "pkg": {
+    "scripts": "server.js",
+    "assets": [
+      ".env",
+      "users.json",
+      "message_history.json",
+      "audit.log",
+      "setup_env.sh"
+    ],
+    "outputPath": "dist"
   },
   "build": {
     "appId": "com.quickmessenger.app",
